@@ -1,0 +1,8 @@
+{
+  "reviewedAt": "2026-11-01",
+  "models": [
+    {"provider":"openrouter","modelId":"anthropic/claude-haiku-5.5","label":"Claude Haiku 5.5","use":"ตัวเลือกทดลองสำหรับคุยโจทย์และสรุปบท","source":"https://openrouter.ai/api/v1/models"},
+    {"provider":"meta","modelId":"muse-wonder-1.0","label":"Muse Wonder · Meta API","use":"ตัวเลือกทดลองสำหรับวางแผนและงานเขียนโค้ดหลายขั้น","source":"https://dev.meta.ai/docs/models"},
+    {"provider":"openrouter","modelId":"meta/muse-wonder","label":"Muse Wonder · OpenRouter","use":"ใช้เส้นทาง OpenRouter แทน Meta โดยตรง","source":"https://openrouter.ai/api/v1/models"}
+  ]
+}

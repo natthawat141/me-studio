@@ -1,0 +1,2 @@
+# Server-specific rules
+Read root AGENTS.md and docs/architecture.md. Mark entry modules server-only. Validate env/requests at boundaries; return explicit safe DTOs, not process.env or raw provider objects. Current read-only routes must not grow paid side effects. Before adding paid endpoints implement verified sessions, workspace ownership, budgets/rate limits and idempotency with tests. Use fixed trusted provider endpoints; never accept arbitrary proxy URLs. Credentials are never returned or logged.

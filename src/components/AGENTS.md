@@ -1,0 +1,2 @@
+# UI-specific rules
+Follow DESIGN.md. Compose installed Base UI/shadcn primitives; user menus need styled accessible controls, never unstyled native selects. No business data/secret/provider calls in components. Use services/shared contracts. Every primary action has a working next step; preserve focus, drafts and mobile access. Avoid nested decorative bordered surfaces. Report actual screenshots inspected or the exact verification limitation.

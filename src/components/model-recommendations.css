@@ -1,0 +1,6 @@
+.model-recommendations { margin: 22px 0; }
+.model-recommendations h3 { margin: 0; font-size: 14px; font-weight: 600; }
+.model-recommendations > p { color: var(--muted); font-size: 11px; margin: 6px 0 10px; }
+.model-recommendations button { display: grid; gap: 4px; width: 100%; text-align: left; padding: 10px 0; border: 0; background: transparent; }
+.model-recommendations button:hover { color: var(--primary); }
+.model-recommendations button span { color: var(--muted); font-size: 12px; }

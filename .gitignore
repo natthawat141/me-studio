@@ -39,3 +39,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Sanitized setup template is intentionally versioned.
+!.env.example
+
+# Browser test artifacts
+/test-results/
+/playwright-report/
+
+# Local-only historical notes and screenshots may contain private references.
+/docs/archive/
+/docs/me-studio.png

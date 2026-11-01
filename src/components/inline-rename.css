@@ -1,0 +1,10 @@
+.inline-rename { min-width: 0; max-width: 100%; position: relative; }
+.inline-rename-trigger { display: flex; align-items: center; gap: 8px; max-width: 100%; padding: 6px 8px; margin-left: -8px; border: 0; border-radius: 6px; background: transparent; font-weight: 500; text-align: left; }
+.inline-rename-trigger:hover { background: #f0f2f5; }
+.inline-rename-trigger span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.inline-rename-trigger svg { color: #818994; flex-shrink: 0; }
+.inline-rename-input { width: 100%; min-width: 140px; max-width: 100%; border: 0; border-bottom: 2px solid var(--primary); padding: 5px 0; outline: none; background: transparent; color: inherit; font: inherit; font-weight: 500; }
+.inline-rename-input:focus-visible { outline: none; }
+.inline-rename-error { display: block; color: #a24238; font-size: 11px; padding-top: 4px; }
+.studio-header > .inline-rename { max-width: 70%; }
+.project-row-name > .inline-rename { flex: 1; }
