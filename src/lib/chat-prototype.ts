@@ -17,6 +17,7 @@ const artifactSchema = z.object({
 export type ChatArtifact = z.infer<typeof artifactSchema>;
 const messageSchema = z.object({
   id: z.string(), role: z.enum(['user', 'assistant']), text: z.string().max(8000),
+  delivery:z.enum(['sent','failed']).optional(),
   attachments: z.array(z.string().max(250)).max(10).optional(),
   files:z.array(chatFileSchema).max(10).optional(),
   choices:z.object({question:z.string().max(300),options:z.array(z.object({label:z.string().max(80),description:z.string().max(300)}).strict()).max(6)}).strict().optional(),

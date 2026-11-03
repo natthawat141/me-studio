@@ -5,7 +5,7 @@ from pathlib import Path
 import httpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "me_studio_agent"))
-from runtime import OpenAIProvider, history_input
+from runtime import OpenAIProvider, history_input, run_agent
 
 
 class RuntimeTests(unittest.IsolatedAsyncioTestCase):
@@ -73,6 +73,25 @@ class RuntimeTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(json.loads(captured[0].content)["model"], "muse-spark-1.3")
         finally:
             await provider.close()
+
+    async def test_image_input_reaches_provider_without_entering_transcript_events(self):
+        captured = []
+        events = []
+        class Provider:
+            async def generate(self, system, messages, tools, limits, emit):
+                captured.extend(messages)
+                return {"output": [], "inputTokens": 1, "outputTokens": 0}
+        async def rpc(method, value):
+            return "system"
+        async def emit(event):
+            events.append(event)
+        image = "data:image/png;base64," + "A" * 150000
+        config = {"text": "describe this image", "history": [], "tools": [], "media": [{"name": "photo.png", "kind": "image", "dataUrl": image}],
+                  "limits": {"maxModelCalls": 2, "maxToolCalls": 2, "maxContextChars": 4096, "maxOutputTokens": 128, "timeoutMs": 1000}}
+        result = await run_agent(config, Provider(), rpc, emit)
+        self.assertNotIn("errorCode", result)
+        self.assertEqual(captured[-1]["content"][1]["image_url"], image)
+        self.assertNotIn(image, json.dumps(events))
 
     def test_completed_pi_transcripts_keep_dialogue_without_orphan_tool_calls(self):
         messages = [{"role": "user", "content": "Milo"},

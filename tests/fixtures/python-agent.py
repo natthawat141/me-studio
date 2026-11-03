@@ -24,7 +24,11 @@ class ScriptedProvider:
         def text(value):
             return {"type": "message", "role": "assistant", "content": [{"type": "output_text", "text": value, "annotations": []}]}
         output = []
-        if user == "provider_error":
+        if isinstance(user, list):
+            images = [p for p in user if p.get("type") == "input_image" and p.get("image_url", "").startswith("data:image/")]
+            texts = [p for p in user if p.get("type") == "input_text"]
+            output = [text(f"received {len(images)} images and {len(texts)} text parts")]
+        elif user == "provider_error":
             raise RuntimeError("SECRET_PROVIDER_BODY sk-never-forward-this-secret")
         elif user == "prior":
             output = [text("legacy restored" if any(m.get("content") == "legacy answer" for m in messages) and "Milo" in system else "missing")]

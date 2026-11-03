@@ -68,12 +68,14 @@ export function useChatPrototype() {
     return true;
   }
   function sendProduction(projectId?:string,files:ChatFileRef[]=[],selection?:NativeSelection,textOverride?:string) {
-    if(!ready||pendingId||!(textOverride??active.draft).trim()||!window.meStudioFiles?.produceVideo)return false;
-    const id=active.id,text=(textOverride??active.draft).trim(),requestId=crypto.randomUUID();nativeRequest.current=requestId;setPendingId(id);
-    setState(s=>{const next=commitChatMessage(s,active,{id:crypto.randomUUID(),role:'user',text,...(files.length?{files}:{})});return textOverride?{...next,threads:next.threads.map(t=>t.id===id?{...t,draft:active.draft}:t)}:next;});
-    void window.meStudioFiles.produceVideo({projectId,sessionId:id,requestId,text,...selection}).then(result=>{
+    if(!ready||pendingId||(!(textOverride??active.draft).trim()&&!files.length)||!window.meStudioFiles?.produceVideo)return false;
+    const id=active.id,text=(textOverride??active.draft).trim()||'ช่วยดูไฟล์ที่แนบให้หน่อย',requestId=crypto.randomUUID();nativeRequest.current=requestId;setPendingId(id);
+    const userMessageId=crypto.randomUUID();
+    const references=files.length?files:[...active.messages].reverse().find(m=>m.role==='user'&&m.files?.length)?.files??[];
+    setState(s=>{const next=commitChatMessage(s,active,{id:userMessageId,role:'user',text,delivery:'sent',...(files.length?{files}:{})});return textOverride?{...next,threads:next.threads.map(t=>t.id===id?{...t,draft:active.draft}:t)}:next;});
+    void window.meStudioFiles.produceVideo({projectId,sessionId:id,requestId,text,attachments:references.map(f=>({id:f.id})),...selection}).then(result=>{
       setState(s=>({...s,threads:s.threads.map(t=>t.id===id?{...t,messages:[...t.messages,{id:crypto.randomUUID(),role:'assistant',text:result.text.replace(/\[[^\]]+\]\([^)]*\)/g,'').slice(0,8000),...(result.files?.length?{files:result.files}:{}),...(result.choices?{choices:result.choices}:{}),...(result.artifact?{artifacts:[{id:result.artifact.id,title:result.artifact.title,kind:'video' as const,src:result.artifact.url,poster:'' as const,nativeProjectId:result.projectId??projectId,files:result.artifact.files}]}:{})}]}:t)}));
-    }).catch(()=>setState(s=>({...s,threads:s.threads.map(t=>t.id===id?{...t,messages:[...t.messages,{id:crypto.randomUUID(),role:'assistant',text:'สร้างงานไม่สำเร็จ หรือถูกหยุด กรุณาตรวจการเชื่อมต่อ AI และลองใหม่'}]}:t)}))).finally(()=>{if(nativeRequest.current===requestId)setPendingId(undefined);});return true;
+    }).catch(()=>setState(s=>({...s,threads:s.threads.map(t=>t.id===id?{...t,messages:[...t.messages.map(m=>m.id===userMessageId?{...m,delivery:'failed' as const}:m),{id:crypto.randomUUID(),role:'assistant',text:'ส่งให้ AI ไม่สำเร็จ หรือถูกหยุด กรุณาตรวจการเชื่อมต่อ AI และลองใหม่'}]}:t)}))).finally(()=>{if(nativeRequest.current===requestId)setPendingId(undefined);});return true;
   }
   function attach(files:ChatFileRef[]){
     if(!ready||pendingId||!files.length)return false;

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, protocol, nativeTheme, session, shell, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, protocol, nativeTheme, session, shell, Menu, nativeImage } from 'electron';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { join, dirname, basename } from 'node:path';
@@ -123,13 +123,14 @@ else {
         }
         if(method==='videoProduce'){
           if((input?.projectId!==undefined&&typeof input.projectId!=='string')||typeof input?.sessionId!=='string'||typeof input?.requestId!=='string'||typeof input?.text!=='string'||input.text.length>8000)throw Error('INVALID_REQUEST');
+          const media=await chatFiles.agentInputs(input.attachments||[],input.projectId,async bytes=>{let image=nativeImage.createFromBuffer(bytes);if(image.isEmpty())throw Error('INVALID_IMAGE');for(const size of [1280,960,640,400]){const dimensions=image.getSize(),ratio=Math.min(1,size/Math.max(dimensions.width,dimensions.height));const scaled=image.resize({width:Math.max(1,Math.round(dimensions.width*ratio)),height:Math.max(1,Math.round(dimensions.height*ratio))});const png=scaled.toPNG();if(png.length<=250000)return 'data:image/png;base64,'+png.toString('base64');const jpeg=scaled.toJPEG(75);if(jpeg.length<=250000)return 'data:image/jpeg;base64,'+jpeg.toString('base64');image=scaled;}throw Error('INVALID_IMAGE');});
           const c=await configOperation(reloadConfig);
           const provider=input.provider||c.catalog.defaultProvider,model=input.model||c.catalog.defaultModel;
           if(!c.catalog.providers.some(p=>p.id===provider&&p.configured&&p.models.some(m=>m.id===model&&m.enabled)))throw Error('MODEL_NOT_AVAILABLE');
           let project=(await projectFolders.list()).find(p=>p.id===input.projectId);
           if(input.projectId&&!project)throw Error('INVALID_PROJECT');
           if(!project){const sourcePath=join(app.getPath('userData'),'workspace');await mkdir(sourcePath,{recursive:true});project={id:'00000000-0000-4000-8000-000000000001',sourcePath,outputPath:join(sourcePath,'output')};}
-          const result=await request('videoProduce',{projectId:project.id,sessionId:input.sessionId,requestId:input.requestId,text:input.text,provider,model,source:project.sourcePath,outputRoot:project.outputPath});
+          const result=await request('videoProduce',{projectId:project.id,sessionId:input.sessionId,requestId:input.requestId,text:input.text,provider,model,media,source:project.sourcePath,outputRoot:project.outputPath});
           if(result.artifact)result.artifact.files=await videoFileReferences(result.artifact.id,project.id);
           if(result.previews)result.files=await Promise.all(result.previews.map(path=>chatFiles.register(path,project.outputPath,project.id)));
           delete result.previews;
@@ -181,7 +182,7 @@ else {
         if (!['list','open'].includes(method)||!input||typeof input.id!=='string'||!/^[a-f0-9-]{36}$/.test(input.id)) throw new Error('INVALID_FILE');
         return {ok:true,value:method==='list'?await workspaceFiles.list(input.id):await workspaceFiles.preview(input.id)};
       } catch(error) {
-        const safe=['INVALID_FILE','INVALID_FOLDER','FILE_OUTSIDE_FOLDER','FILE_TOO_LARGE','FOLDER_LIMIT','INVALID_PROJECT','INVALID_REGISTRY','DUPLICATE_FOLDER','INVALID_CONFIG','INVALID_DEFAULT_MODEL','CONFIG_OPEN_FAILED','MODEL_NOT_AVAILABLE'];
+        const safe=['INVALID_FILE','INVALID_FOLDER','FILE_OUTSIDE_FOLDER','FILE_TOO_LARGE','FOLDER_LIMIT','INVALID_PROJECT','INVALID_REGISTRY','DUPLICATE_FOLDER','INVALID_CONFIG','INVALID_DEFAULT_MODEL','CONFIG_OPEN_FAILED','MODEL_NOT_AVAILABLE','ATTACHMENT_LIMIT','INVALID_IMAGE'];
         return {ok:false,error:safe.includes(error.message)?error.message:'FILE_READ_FAILED'};
       }
     });

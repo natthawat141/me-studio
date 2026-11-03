@@ -26,3 +26,24 @@ test('chat files persist scoped references, renew streaming grants, bound text a
   await assert.rejects(renewed.preview({id:ref.id,projectId}),/FILE_OUTSIDE_FOLDER/);assert.equal((await renewed.serve(new Request(live.src!))).status,404);
  }finally{await rm(root,{recursive:true,force:true});}
 });
+
+test('agent attachment inputs are scoped, bounded and read bytes rather than trusting display filenames',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'studio-agent-files-'));try{
+  const service=new ChatFiles(root),ref=await service.store({name:'photo.png',data:new TextEncoder().encode('image-bytes').buffer,projectId});
+  const transform=async(bytes:Buffer)=>'data:image/png;base64,'+bytes.toString('base64');
+  const media=await service.agentInputs([{id:ref.id}],projectId,transform);
+  assert.equal(media[0].kind,'image');assert.match(media[0].dataUrl!,/^data:image\/png;base64,/);
+  await assert.rejects(service.agentInputs([{id:ref.id}],undefined,transform),/INVALID_FILE/);
+  await assert.rejects(service.agentInputs(Array.from({length:11},()=>({id:ref.id})),projectId,transform));
+  await assert.rejects(service.agentInputs(Array.from({length:7},()=>({id:ref.id})),projectId,transform),/ATTACHMENT_LIMIT/);
+  await assert.rejects(service.agentInputs([{id:ref.id}],projectId,async()=> 'https://external.invalid/image.png'),/INVALID_IMAGE/);
+  const note=await service.store({name:'brief.md',data:new TextEncoder().encode('user supplied brief').buffer,projectId});
+  const clip=await service.store({name:'clip.mp4',data:new Uint8Array([1]).buffer,projectId});
+  assert.deepEqual(await service.agentInputs([{id:note.id},{id:clip.id}],projectId,transform),[{kind:'text',name:'brief.md',text:'user supplied brief'},{kind:'unsupported',name:'clip.mp4',mediaType:'video'}]);
+  const elsewhere=join(root,'elsewhere.png');await writeFile(elsewhere,'other');
+  const index=JSON.parse(await (await import('node:fs/promises')).readFile(join(root,'chat-files.json'),'utf8'));
+  const path=index.find((r:{id:string})=>r.id===ref.id).path;
+  await rm(path);await symlink(elsewhere,path);
+  await assert.rejects(service.agentInputs([{id:ref.id}],projectId,transform),/FILE_OUTSIDE_FOLDER/);
+ }finally{await rm(root,{recursive:true,force:true});}
+});

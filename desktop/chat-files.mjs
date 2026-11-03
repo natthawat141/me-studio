@@ -43,6 +43,26 @@ export class ChatFiles {
     if(preview.src)this.#services.set(new URL(preview.src).hostname,{service,path:item.path});
     return {...preview,entry:{...preview.entry,name:item.name,relativePath:item.relativePath}};
   }
+  async agentInputs(input,projectId,transformImage){
+    const refs=z.array(z.object({id:z.string().uuid()}).strict()).max(10).parse(input);
+    if(projectId!==undefined)z.string().uuid().parse(projectId);
+    const records=await this.#records(),media=[];let textBudget=30000,imageCount=0;
+    for(const ref of refs){
+      const item=records.find(r=>r.id===ref.id&&r.projectId===projectId);if(!item)throw Error('INVALID_FILE');
+      const path=await realpath(item.path),root=await realpath(item.root),rel=relative(root,path);
+      if(path!==item.path||rel==='..'||rel.startsWith('../')||isAbsolute(rel))throw Error('FILE_OUTSIDE_FOLDER');
+      const info=await stat(path);if(!info.isFile()||info.size>25*1024*1024)throw Error('FILE_TOO_LARGE');
+      if(item.kind==='image'){
+        if(++imageCount>6)throw Error('ATTACHMENT_LIMIT');
+        const dataUrl=await transformImage(await readFile(path));
+        if(typeof dataUrl!=='string'||dataUrl.length>360000||!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(dataUrl))throw Error('INVALID_IMAGE');
+        media.push({kind:'image',name:item.name,dataUrl});
+      }else if(item.kind==='text'){
+        if(info.size>65536)throw Error('FILE_TOO_LARGE');const text=await readFile(path,'utf8');textBudget-=text.length;if(textBudget<0)throw Error('ATTACHMENT_LIMIT');media.push({kind:'text',name:item.name,text});
+      }else media.push({kind:'unsupported',name:item.name,mediaType:item.kind});
+    }
+    return media;
+  }
   owns(id){return this.#services.has(id);}
   async serve(request){
     const grant=this.#services.get(new URL(request.url).hostname);if(!grant)return new Response(null,{status:404});

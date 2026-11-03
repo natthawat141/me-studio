@@ -9,7 +9,7 @@ if not getattr(sys, "frozen", False):
     sys.path.insert(0, str(Path(__file__).resolve().parent))
 from runtime import OpenAIProvider, run_agent, json_text
 
-MAX_LINE = 1_000_000
+MAX_LINE = 4_000_000
 
 
 async def read_line():

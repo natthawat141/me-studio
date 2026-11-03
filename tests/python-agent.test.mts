@@ -60,3 +60,14 @@ test('Python resumes a database written by Pi without migrating or replaying leg
   assert.equal(reopened.list({ownerId:session.ownerId,projectId:session.projectId})[0].revision,1);
  }finally{reopened.close();}
 }));
+
+
+test('bounded multimodal payload crosses actual JSONL without storing image bytes and contributes to request identity',async()=>fixture(async store=>{
+ const media=Array.from({length:6},(_,i)=>({kind:'image' as const,name:`image-${i}.png`,dataUrl:'data:image/png;base64,'+'A'.repeat(300000)}));
+ const run={requestId:'vision',text:'describe the references',media};
+ const first=await harness(store).run(run);
+ assert.equal(first.status,'completed');assert.equal(first.result,'received 6 images and 1 text parts');
+ assert.ok(!JSON.stringify(store.readTranscript(session)).includes('data:image/'));
+ assert.equal((await harness(store).run(run)).replayed,true);
+ await assert.rejects(harness(store).run({...run,media:[media[0]]}),/REQUEST_CONFLICT/);
+}));

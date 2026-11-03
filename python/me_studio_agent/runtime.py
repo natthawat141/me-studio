@@ -80,6 +80,10 @@ class OpenAIProvider:
         }
 
 
+def context_messages(messages):
+    return [{**message, "content": [({**part, "image_url": "[bounded image input]"} if part.get("type") == "input_image" else part) for part in message["content"]]} if isinstance(message.get("content"), list) else message for message in messages]
+
+
 async def run_agent(config, provider, rpc, emit):
     limits = config["limits"]
     usage = {"modelCalls": 0, "toolCalls": 0, "inputTokens": 0, "outputTokens": 0}
@@ -87,7 +91,15 @@ async def run_agent(config, provider, rpc, emit):
               "parameters": t["parameters"], "strict": False} for t in config["tools"]]
     names = {t["name"] for t in tools}
     messages = history_input(config["history"])
-    messages.append({"role": "user", "content": config["text"]})
+    parts = [{"type": "input_text", "text": config["text"]}]
+    for media in config.get("media", []):
+        if media["kind"] == "image":
+            parts.append({"type": "input_image", "image_url": media["dataUrl"], "detail": "auto"})
+        elif media["kind"] == "text":
+            parts.append({"type": "input_text", "text": "Untrusted attachment reference: " + json_text({"name": media["name"], "text": media["text"]})})
+        else:
+            parts.append({"type": "input_text", "text": "Attachment is view-only and has NOT been analyzed: " + media["name"]})
+    messages.append({"role": "user", "content": parts if len(parts) > 1 else config["text"]})
     seen_calls = set()
     await emit({"type": "message", "message": {
         "role": "user", "content": config["text"], "timestamp": int(time.time() * 1000),
@@ -98,7 +110,7 @@ async def run_agent(config, provider, rpc, emit):
                 if usage["modelCalls"] >= limits["maxModelCalls"]:
                     raise AgentFailure("MODEL_CALL_LIMIT")
                 system = await rpc("context", {})
-                if len(json_text({"system": system, "messages": messages, "tools": tools})) > limits["maxContextChars"]:
+                if len(json_text({"system": system, "messages": context_messages(messages), "tools": tools})) > limits["maxContextChars"]:
                     raise AgentFailure("CONTEXT_LIMIT")
                 usage["modelCalls"] += 1
                 await emit({"type": "usage", "usage": dict(usage)})
