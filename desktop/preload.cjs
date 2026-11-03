@@ -14,15 +14,17 @@ const fileRequest = (method,input) => ipcRenderer.invoke('studio:files',method,i
   return result.value;
 });
 contextBridge.exposeInMainWorld('meStudioFiles',Object.freeze({
+  onProductionEvent:callback=>{const listener=(_event,value)=>{if(value?.kind==='production')callback(value);};ipcRenderer.on('studio:event',listener);return()=>ipcRenderer.removeListener('studio:event',listener);},
   chooseFolder:()=>fileRequest('choose'),
   configCatalog:()=>fileRequest('configCatalog'),
   openConfig:()=>fileRequest('configOpen'),
   saveProvider:input=>fileRequest('configProvider',input),
+  setReasoning:input=>fileRequest('configReasoning',input),
   toggleModel:input=>fileRequest('configToggle',input),
   videoStatus:()=>fileRequest('videoStatus'),
   loadVideoKeys:()=>fileRequest('videoKeys'),
   produceVideo:input=>fileRequest('videoProduce',input),
-  cancelVideo:()=>fileRequest('videoCancel'),
+  cancelVideo:input=>fileRequest('videoCancel',input),
   saveVideo:input=>fileRequest('videoSave',input),
   videoArtifact:input=>fileRequest('videoArtifact',input),
   storeChatFile:input=>fileRequest('storeChatFile',input),

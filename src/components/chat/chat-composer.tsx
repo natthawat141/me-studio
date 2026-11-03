@@ -5,14 +5,14 @@ import { ArrowUp, Check, ChevronDown, Paperclip, Plus, Settings2, Square, Upload
 import { PromptInput, PromptInputTextarea, PromptInputActions } from '@/components/prompt-kit/prompt-input';
 import { FileUpload, FileUploadTrigger, FileUploadContent } from '@/components/prompt-kit/file-upload';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import type {NativeCatalog,NativeSelection} from '@/lib/native-models';
+import type {NativeCatalog,NativeSelection,ReasoningEffort} from '@/lib/native-models';
 import {chatCommands} from '@/lib/chat-commands';
 import type { ChatProvider } from '@/lib/chat-prototype';
 import type { ChatFileRef } from '@/lib/workspace-files';
 import { workspaceFiles } from '@/services/workspace-files';
 
 type Props = {
-  catalog?:NativeCatalog;selection?:NativeSelection;onSelectModel?:(selection:NativeSelection)=>void;
+  onReasoning?:(effort:ReasoningEffort)=>void;catalog?:NativeCatalog;selection?:NativeSelection;onSelectModel?:(selection:NativeSelection)=>void;
   threadId: string; projectId?:string;
   value: string; onChange: (value: string) => void; onSend: (files: string[],localFiles?:ChatFileRef[]) => boolean | Promise<boolean>;
   pending: boolean; busy: boolean; disabled: boolean; onStop: () => void;
@@ -96,6 +96,7 @@ export function ChatComposer(props: Props) {
             <DropdownMenuSeparator /><DropdownMenuItem onClick={props.onSettings}><Settings2 size={16} />{props.catalog?'จัดการโมเดล':'ตั้งค่าผู้ให้บริการ'}</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        {props.catalog&&props.onReasoning&&props.selection?.provider!=='meta'&&<DropdownMenu><DropdownMenuTrigger render={<button className="model-picker" aria-label="ระดับการคิด" disabled={props.disabled||props.busy}/>}>{({auto:'Auto',low:'Low',medium:'Medium',high:'High'})[props.catalog.reasoning||'auto']}<ChevronDown size={12}/></DropdownMenuTrigger><DropdownMenuContent side="top" align="end" className="chat-menu">{(['auto','low','medium','high'] as const).map(e=><DropdownMenuItem key={e} onClick={()=>props.onReasoning?.(e)}>{({auto:'อัตโนมัติ',low:'น้อย',medium:'ปานกลาง',high:'มาก'})[e]}{(props.catalog?.reasoning||'auto')===e&&<Check size={14}/>}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>}
         {props.pending ? <button className="composer-send" aria-label="หยุดตอบ" onClick={props.onStop}><Square size={13} fill="currentColor" /></button> : <button className="composer-send" aria-label="ส่งข้อความ" onClick={()=>void submit()} disabled={props.disabled || props.busy || importing || (!props.value.trim() && !files.length)}><ArrowUp size={20} strokeWidth={1.8} /></button>}
       </PromptInputActions>
     </PromptInput>

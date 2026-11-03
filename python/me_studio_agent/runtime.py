@@ -8,6 +8,8 @@ from deepagents.middleware.filesystem import FilesystemMiddleware
 from langchain.agents.middleware import AgentMiddleware,TodoListMiddleware,wrap_model_call,wrap_tool_call
 from langchain_core.messages import AIMessage,AIMessageChunk,HumanMessage,SystemMessage,ToolMessage
 from langchain_core.tools import StructuredTool
+from langgraph.types import Command
+from langchain_core.utils.function_calling import convert_to_openai_tool
 from models import OpenAIProvider
 
 class AgentFailure(Exception): pass
@@ -64,10 +66,13 @@ async def run_agent(config,provider,rpc,emit):
         base=request.system_message.content if request.system_message else ''
         if not isinstance(base,str): base=json_text(base)
         system=SystemMessage(content=base+'\nTrusted host context:\n'+context)
-        size=len(json_text(bounded_text({'system':system.content,'messages':[m.model_dump(mode='json') for m in request.messages],'tools':config['tools']})))
+        size=len(json_text(bounded_text({'system':system.content,'messages':[m.model_dump(mode='json') for m in request.messages],'tools':[convert_to_openai_tool(t) for t in request.tools]})))
         if size>limits['maxContextChars']: raise AgentFailure('CONTEXT_LIMIT')
         usage['modelCalls']+=1;await emit({'type':'usage','usage':dict(usage)})
         response=await handler(request.override(system_message=system))
+        for m in response.result:
+            if isinstance(m,AIMessage) and (m.response_metadata.get('status') in ('incomplete','failed','cancelled') or m.invalid_tool_calls):
+                raise AgentFailure('MODEL_ERROR')
         calls=[c for m in response.result if isinstance(m,AIMessage) for c in m.tool_calls]
         if usage['toolCalls']+len(calls)>limits['maxToolCalls']: raise AgentFailure('TOOL_CALL_LIMIT')
         for m in response.result:
@@ -92,7 +97,11 @@ async def run_agent(config,provider,rpc,emit):
             await event_message('toolResult',transcript_content(parts),toolCallId=call_id,toolName=name,isError=bool(result.get('isError')))
         else:
             message=await handler(request)
-            await event_message('toolResult',[{'type':'text','text':str(message.content)[:20000]}],toolCallId=call_id,toolName=name,isError=getattr(message,'status','success')=='error')
+            observed=message
+            if isinstance(message,Command):
+                updates=message.update if isinstance(message.update,dict) else {}
+                observed=next((m for m in updates.get('messages',[]) if isinstance(m,ToolMessage)),None)
+            await event_message('toolResult',[{'type':'text','text':str(getattr(observed,'content','State updated'))[:20000]}],toolCallId=call_id,toolName=name,isError=getattr(observed,'status','success')=='error')
         await emit({'type':'tool_end','name':name,'callId':call_id,'isError':getattr(message,'status','success')=='error'})
         await emit({'type':'usage','usage':dict(usage)})
         return message
@@ -115,7 +124,8 @@ async def run_agent(config,provider,rpc,emit):
                     message,_metadata=chunk
                     if isinstance(message,AIMessageChunk) and message.text: await emit({'type':'text_delta','text':message.text})
         final=next((m for m in reversed(last.get('messages',[])) if isinstance(m,AIMessage)),None)
-        return {'result':final.text if final else '', 'usage':usage}
+        if final is None or not final.text.strip():raise AgentFailure('MODEL_ERROR')
+        return {'result':final.text, 'usage':usage}
     except TimeoutError: return {'errorCode':'TIMEOUT','usage':usage}
     except AgentFailure as error: return {'errorCode':str(error),'usage':usage}
     except Exception: return {'errorCode':'MODEL_ERROR','usage':usage}

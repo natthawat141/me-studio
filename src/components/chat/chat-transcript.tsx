@@ -12,14 +12,14 @@ type Props = {
   onRetryMessage?:(text:string,files:ChatFileRef[])=>void;
   onChoice?:(text:string)=>void;
   thread: ChatThread;
-  pending: boolean;
+  pending: boolean;stage?:string;
   messageId?: string;
   onOpenFile: (file: WorkspacePreview, trigger: HTMLButtonElement) => void;
   onOpenArtifact: (artifact: ChatArtifact, trigger: HTMLButtonElement) => void;
 };
 
 /** Only the message column changes identity; the viewport and composer stay mounted. */
-export function ChatTranscript({thread, pending,onChoice,onRetryMessage, messageId, onOpenFile, onOpenArtifact}: Props) {
+export function ChatTranscript({thread, pending,stage,onChoice,onRetryMessage, messageId, onOpenFile, onOpenArtifact}: Props) {
   const viewport = useRef<HTMLDivElement>(null);
   const column = useRef<HTMLDivElement>(null);
   const current = useRef<string | undefined>(undefined);
@@ -62,7 +62,7 @@ export function ChatTranscript({thread, pending,onChoice,onRetryMessage, message
         {message.choices&&<div className="chat-choice-group" aria-label={message.choices.question}><p>{message.choices.question}</p><div>{message.choices.options.map(option=><button key={option.label} disabled={pending} onClick={()=>onChoice?.(`เลือก ${option.label}: ${option.description}`)}><strong>{option.label}</strong><span>{option.description}</span></button>)}</div></div>}
         {!!message.artifacts?.length && <div className="chat-artifacts">{message.artifacts.map(item => <ChatInlineArtifact key={item.id} item={item} onOpenFile={onOpenFile} onOpen={onOpenArtifact} />)}</div>}
       </article>)}
-      {pending && <p className="chat-thinking" role="status" aria-label="กำลังคิด…"><span aria-hidden="true">กำลังคิด</span><span className="thinking-dots" aria-hidden="true"><i/><i/><i/></span></p>}
+      {pending && <p className="chat-thinking" role="status" aria-label="กำลังคิด…"><span aria-hidden="true">{stage||'กำลังคิด'}</span><span className="thinking-dots" aria-hidden="true"><i/><i/><i/></span></p>}
     </div>
   </div>;
 }

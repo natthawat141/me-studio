@@ -6,7 +6,7 @@ import {z} from 'zod';
 import {openaiChatModels,metaChatModels,type NativeCatalog} from '../src/lib/native-models';
 
 const modelList=z.array(z.object({id:z.string().regex(/^[a-zA-Z0-9._:/-]{1,160}$/),label:z.string().min(1).max(80),enabled:z.boolean().default(true)}).strict()).max(100).refine(items=>new Set(items.map(i=>i.id)).size===items.length);
-const keys=['META_API_KEY','STUDIO_META_MODELS','OPENAI_API_KEY','OPENROUTER_API_KEY','ELEVENLABS_API_KEY','STUDIO_DEFAULT_CHAT_PROVIDER','STUDIO_DEFAULT_CHAT_MODEL','STUDIO_OPENAI_MODELS','STUDIO_CHAT_MODELS','STUDIO_SPEECH_VOICE_ID','STUDIO_SPEECH_MODEL','STUDIO_SPEECH_LANGUAGE'] as const;
+const keys=['STUDIO_REASONING_EFFORT','META_API_KEY','STUDIO_META_MODELS','OPENAI_API_KEY','OPENROUTER_API_KEY','ELEVENLABS_API_KEY','STUDIO_DEFAULT_CHAT_PROVIDER','STUDIO_DEFAULT_CHAT_MODEL','STUDIO_OPENAI_MODELS','STUDIO_CHAT_MODELS','STUDIO_SPEECH_VOICE_ID','STUDIO_SPEECH_MODEL','STUDIO_SPEECH_LANGUAGE'] as const;
 function encode(value:string){const quote=["'",'"','`'].find(q=>!value.includes(q));if(!quote)throw Error('INVALID_CONFIG');return quote+value+quote;}
 export function parseAppConfig(text:string){
  if(Buffer.byteLength(text)>65536)throw Error('INVALID_CONFIG');
@@ -26,7 +26,8 @@ export function parseAppConfig(text:string){
  const defaultProvider=env.STUDIO_DEFAULT_CHAT_PROVIDER||'openai';
  const defaultModel=env.STUDIO_DEFAULT_CHAT_MODEL||'gpt-6-luna';
  if(!providers.some(p=>p.id===defaultProvider&&p.models.some(m=>m.id===defaultModel)))throw Error('INVALID_DEFAULT_MODEL');
- const catalog:NativeCatalog={providers,defaultProvider,defaultModel,voiceConfigured:!!env.ELEVENLABS_API_KEY};
+ const reasoning=z.enum(['auto','low','medium','high']).parse(env.STUDIO_REASONING_EFFORT||'auto');
+ const catalog:NativeCatalog={reasoning,providers,defaultProvider,defaultModel,voiceConfigured:!!env.ELEVENLABS_API_KEY};
  return {env,catalog};
 }
 const template=`# me studio — local credentials. Never share or commit this file.
@@ -35,6 +36,7 @@ OPENAI_API_KEY=
 OPENROUTER_API_KEY=
 ELEVENLABS_API_KEY=
 
+STUDIO_REASONING_EFFORT=auto
 STUDIO_DEFAULT_CHAT_PROVIDER=openai
 STUDIO_DEFAULT_CHAT_MODEL=gpt-6-luna
 # Model IDs and names can be edited. Settings toggles update enabled.
@@ -57,5 +59,6 @@ export class AppConfig {
   if(v.modelId&&v.provider!=='elevenlabs'){const p=catalog.providers.find(p=>p.id===v.provider)!;if(!p.models.some(m=>m.id===v.modelId))p.models.push({id:v.modelId,label:v.modelLabel||v.modelId,enabled:true});const list={openai:'STUDIO_OPENAI_MODELS',openrouter:'STUDIO_CHAT_MODELS',meta:'STUDIO_META_MODELS'}[v.provider];env[list]=JSON.stringify(p.models);}
   await this.replace('# me studio — local credentials. Never share or commit.\n'+keys.filter(k=>env[k]!==undefined).map(k=>`${k}=${encode(env[k])}`).join('\n')+'\n');return (await this.read()).catalog;
  }
+ async reasoning(input:unknown){const value=z.enum(['auto','low','medium','high']).parse(input);const {env}=await this.read();env.STUDIO_REASONING_EFFORT=value;await this.replace(keys.filter(k=>env[k]!==undefined).map(k=>`${k}=${encode(env[k])}`).join('\n')+'\n');return (await this.read()).catalog;}
  async toggle(provider:string,model:string,enabled:boolean){const {env,catalog}=await this.read();const p=catalog.providers.find(p=>p.id===provider),m=p?.models.find(m=>m.id===model);if(!p||!m||typeof enabled!=='boolean')throw Error('INVALID_MODEL');m.enabled=enabled;const key=provider==='openai'?'STUDIO_OPENAI_MODELS':provider==='meta'?'STUDIO_META_MODELS':'STUDIO_CHAT_MODELS';env[key]=JSON.stringify(p.models);await this.replace(keys.filter(k=>env[k]!==undefined).map(k=>`${k}=${encode(env[k])}`).join('\n')+'\n');return (await this.read()).catalog;}
 }

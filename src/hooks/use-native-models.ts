@@ -1,6 +1,6 @@
 'use client';
 import {useCallback,useEffect,useState} from 'react';
-import type {NativeCatalog,NativeSelection,ProviderConnection} from '@/lib/native-models';
+import type {NativeCatalog,NativeSelection,ProviderConnection,ReasoningEffort} from '@/lib/native-models';
 const storageKey='me-studio.native-model.v1';
 export function useNativeModels(){
  const [catalog,setCatalog]=useState<NativeCatalog>();
@@ -25,6 +25,7 @@ export function useNativeModels(){
  function select(value:NativeSelection){setSelection(value);try{localStorage.setItem(storageKey,JSON.stringify(value));}catch{setError('บันทึกการเลือกโมเดลไม่สำเร็จ');}}
  async function saveProvider(input:ProviderConnection){try{const save=window.meStudioFiles?.saveProvider;if(!save)throw Error();await save(input);await refresh();return true;}catch{setError('บันทึกคีย์ไม่สำเร็จ กรุณาตรวจข้อมูลแล้วลองใหม่');return false;}}
  async function toggle(provider:string,model:string,enabled:boolean){try{await window.meStudioFiles?.toggleModel?.({provider,model,enabled});await refresh();}catch{setError('บันทึกโมเดลไม่สำเร็จ กรุณาลองใหม่');}}
+ async function reasoning(effort:ReasoningEffort){try{if(!window.meStudioFiles?.setReasoning)throw Error();await window.meStudioFiles.setReasoning({effort});await refresh();}catch{setError('บันทึกระดับการคิดไม่สำเร็จ');}}
  async function open(){try{if(!window.meStudioFiles?.openConfig){setError('เปิด config.env ได้ในแอป Mac');return;}await window.meStudioFiles.openConfig();}catch{setError('เปิด config.env ไม่สำเร็จ กรุณาตั้งแอปสำหรับเปิดไฟล์ .env');}}
- return {catalog,selection,error,refresh,select,toggle,open,saveProvider};
+ return {catalog,selection,error,refresh,select,toggle,open,saveProvider,reasoning};
 }

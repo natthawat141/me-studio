@@ -24,7 +24,9 @@ class ScriptedModel(BaseChatModel):
         self.seen = list(messages)
         self.step += 1
         if self.mode == 'error': raise RuntimeError('SECRET_PROVIDER_BODY')
-        if self.mode in ('tool', 'batch') and self.step == 1:
+        if self.mode=='todo' and self.step==1:
+            yield ChatGenerationChunk(message=AIMessageChunk(content='',tool_calls=[{'name':'write_todos','args':{'todos':[{'content':'Inspect draft','status':'pending'}]},'id':'todo-1'}]))
+        elif self.mode in ('tool', 'batch') and self.step == 1:
             calls=[{'name':'inspect', 'args':{}, 'id':f'call-{i}'} for i in range(2 if self.mode=='batch' else 1)]
             yield ChatGenerationChunk(message=AIMessageChunk(content='', tool_calls=calls))
         else:
@@ -52,6 +54,13 @@ class DeepAgentTests(unittest.IsolatedAsyncioTestCase):
         names=[t.name for t in model.bound]
         self.assertIn('write_todos',names)
         self.assertNotIn('task',names);self.assertNotIn('execute',names);self.assertNotIn('delete',names)
+    async def test_sdk_todo_command_continues_with_state(self):
+        model=ScriptedModel(mode='todo')
+        result,events,calls=await self.run_fixture(model)
+        self.assertEqual(result.get('result'),'ได้รับแล้ว');self.assertEqual(calls,[])
+        self.assertTrue(any(isinstance(m,ToolMessage) and m.name=='write_todos' for m in model.seen))
+        self.assertTrue(any(e['type']=='tool_end' for e in events))
+
     async def test_tool_images_reach_next_model_without_transcript_bytes(self):
         model=ScriptedModel(mode='tool')
         result,events,calls=await self.run_fixture(model)
@@ -67,6 +76,24 @@ class DeepAgentTests(unittest.IsolatedAsyncioTestCase):
         model=ScriptedModel(mode='batch')
         result,_,calls=await self.run_fixture(model,limits={'maxModelCalls':3,'maxToolCalls':1,'maxContextChars':128000,'maxOutputTokens':128,'timeoutMs':10000})
         self.assertEqual(result['errorCode'],'TOOL_CALL_LIMIT');self.assertEqual(calls,[])
+    async def test_effective_sdk_tool_schemas_count_toward_context_budget(self):
+        model=ScriptedModel()
+        result,_,_=await self.run_fixture(model,tools=[],limits={'maxModelCalls':3,'maxToolCalls':3,'maxContextChars':4096,'maxOutputTokens':128,'timeoutMs':10000})
+        self.assertEqual(result['errorCode'],'CONTEXT_LIMIT');self.assertEqual(model.step,0)
+
+    async def test_incomplete_responses_are_not_success(self):
+        import httpx,json
+        async def handler(request):
+            event={'type':'response.incomplete','sequence_number':1,'response':{'id':'resp_incomplete','object':'response','created_at':0,'model':'gpt-6-luna','status':'incomplete','incomplete_details':{'reason':'max_output_tokens'},'output':[],'usage':{'input_tokens':1,'output_tokens':1,'total_tokens':2}}}
+            return httpx.Response(200,headers={'content-type':'text/event-stream'},content='event: response.incomplete\ndata: '+json.dumps(event)+'\n\n')
+        client=httpx.AsyncClient(transport=httpx.MockTransport(handler),trust_env=False)
+        model=create_chat_model({'apiKey':'synthetic-key'},client)
+        try:
+            result,events,_=await self.run_fixture(model)
+            self.assertEqual(result['errorCode'],'MODEL_ERROR');self.assertNotIn('result',result)
+            self.assertFalse(any(e['type']=='message' and e['message']['role']=='assistant' for e in events))
+        finally:await client.aclose();model.http_client.close()
+
     async def test_langchain_adapter_sends_fixed_endpoint_selected_model_and_reasoning(self):
         import httpx,json
         captured=[]

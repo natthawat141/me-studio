@@ -46,7 +46,7 @@ class ScriptedProvider:
             output = [{**call("remember_project_memory", {}), "arguments": "not-json"}]
         elif user == "render_html":
             design = {"title": "ความทรงจำที่เคลื่อนไหว", "html": "<style>body{background:#eee6d8;color:#37332f;display:grid;place-items:center;font-family:Arial}.card{padding:48px;animation:arrival 2s both}h1{font-size:50px;font-weight:400}@keyframes arrival{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}</style><main class='card'><h1>Our story</h1><p>One year. A thousand memories.</p></main>", "width": 640, "height": 480, "durationSeconds": 3, "narration": ""}
-            steps = [("save_html_animation", design), ("render_video", {"requireVoice": False})]
+            steps = [("save_html_animation", design), ("inspect_animation", {}), ("save_html_animation", {**design,"title":"Inspected revision"}), ("render_video", {"requireVoice": False}), ("inspect_animation", {})]
             output = [call(*steps[self.step-1])] if self.step <= len(steps) else [text("สร้าง HTML animation จริงแล้ว")]
         elif user == "render":
             scene = {"title": "Python runtime demo", "durationSeconds": 3, "layout": "portrait", "background": "city-night", "characters": [{"name": "บิว", "shirt": "#42a5f5"}, {"name": "แมค", "shirt": "#fb8c00"}], "cues": [{"start": .1, "end": 1.2, "speaker": 0, "text": "สวัสดี", "action": "wave"}], "ending": "ยินดีที่ได้รู้จัก"}

@@ -52,3 +52,7 @@ Native agent-capable chat refreshes worker credential status before every text s
 ## Collaborative creation
 
 User intent and references govern direction. Expertise helps explain choices and execute well; it must not impose a fixed cast, duration, style or universal approval sequence. Slash commands are optional discovery shortcuts. Skills are bundled creative capabilities with project-specific enable/disable preferences. Working HTML/JSON are internal unless requested. Native sends include bounded image inputs and plain text references for the selected model; vision support depends on that model. Audio/video remain view-only.
+
+## Deep Agents runtime update
+
+The active Python video runtime now uses Deep Agents SDK with explicit LangChain model adapters. Node retains Project grants, credentials, SQLite and production tools. Real Project image assets, three-frame draft/MP4 inspection, up to three versioned render attempts/request, native request-scoped streaming/Stop and persisted reasoning effort are implemented. See [Python runtime guide](docs/python-agent-runtime.md) for exact limits and trust boundaries. Verification and live-provider quality are separate claims. Research/Tavily and richer creative skill content remain subsequent work.

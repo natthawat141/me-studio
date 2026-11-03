@@ -60,3 +60,7 @@ AppConfig in Electron owns a fixed userData/config.env path and returns safe mod
 ## Creative config update
 
 For current native behavior, [video-harness.md](video-harness.md) supersedes the fixed-Luna/fixed-Canvas descriptions above. Model identity is configured and travels to Python. Slash commands, real HTML/CSS preview images, contextual choices and draft versions are available; no universal creative workflow is imposed. AppConfig owns native userData/config.env and safe visibility metadata. Legacy web provider forms and attachment viewing remain distinct from live native capabilities.
+
+## Deep Agents runtime update
+
+The active Python video runtime now uses Deep Agents SDK with explicit LangChain model adapters. Node retains Project grants, credentials, SQLite and production tools. Real Project image assets, three-frame draft/MP4 inspection, up to three versioned render attempts/request, native request-scoped streaming/Stop and persisted reasoning effort are implemented. See [Python runtime guide](python-agent-runtime.md) for exact limits and trust boundaries. Verification and live-provider quality are separate claims. Research/Tavily and richer creative skill content remain subsequent work.

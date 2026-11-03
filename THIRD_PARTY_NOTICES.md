@@ -47,3 +47,7 @@ The build copies installed dependency license/notice files and CPython's complet
 ## Markdown rendering
 
 Assistant answers use published MIT-licensed dependencies [react-markdown](https://github.com/remarkjs/react-markdown) 10.1.0 and [remark-gfm](https://github.com/remarkjs/remark-gfm) 4.0.1. Exact package integrity and transitive versions are in package-lock.json. Their original license files are preserved in the distributed dependencies; the desktop build also copies both direct-package licenses into runtime notices. No upstream chat UI or branding is copied.
+
+## Deep Agents and LangChain
+
+The active Python runtime uses [Deep Agents](https://github.com/langchain-ai/deepagents) 0.7.32 and [langchain-openai](https://github.com/langchain-ai/langchain) 1.7.3, with LangChain/LangGraph dependencies pinned in python/requirements.lock. These packages are MIT licensed; their original copyright/license files are copied from installed distributions into the packaged runtime notices. CPython, OpenAI and PyInstaller notices above remain applicable. No upstream chat UI or branding is copied.

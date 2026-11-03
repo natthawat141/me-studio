@@ -81,3 +81,5 @@ UI tests use isolated browser data and a dedicated local server. On this Mac `PL
 
 ## Delivery
 Inspect Git status first and preserve unrelated work. Complete the requested slice without silently enabling terminal/browser/AI execution, migrating data or adding product scope. Update canonical docs with behavior changes; keep task evidence out of stable instruction files. Report user-visible changes, checks actually run and material limits in Thai. Do not claim a saved config, mock response or written plan proves working integration.
+
+The active runtime uses Deep Agents in Python; preserve its explicit middleware/tool restrictions and host-owned budgets. See docs/python-agent-runtime.md before changing SDK defaults.

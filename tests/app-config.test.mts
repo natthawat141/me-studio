@@ -11,6 +11,7 @@ test('native config seeds actual GPT IDs, persists visibility and never returns 
   let data=await config.read();assert.equal(data.catalog.providers.find(p=>p.id==='openai')!.configured,true);assert.equal(data.catalog.voiceConfigured,true);
   assert.ok(data.catalog.providers.find(p=>p.id==='openai')!.models.some(m=>m.id==='gpt-6.1-sol'));
   assert.ok(!JSON.stringify(data.catalog).includes('synthetic'));assert.ok(!(await readFile(config.path,'utf8')).includes('UNRELATED'));
+  assert.equal(data.catalog.reasoning,'auto');await config.reasoning('high');assert.equal((await config.read()).catalog.reasoning,'high');await assert.rejects(config.reasoning('unbounded'));
   await config.toggle('openai','gpt-6.1-sol',false);data=await config.read();assert.equal(data.catalog.providers.find(p=>p.id==='openai')!.models.find(m=>m.id==='gpt-6.1-sol')?.enabled,false);
   assert.equal(data.env.OPENAI_API_KEY,'synthetic-local-key');assert.equal((await stat(config.path)).mode&0o777,0o600);
   await config.saveProvider({provider:'meta',apiKey:'synthetic-meta-key'});const connected=await config.read();assert.equal(connected.catalog.providers.find(p=>p.id==='meta')?.configured,true);assert.ok(!JSON.stringify(connected.catalog).includes('synthetic-meta-key'));assert.equal(connected.env.OPENAI_API_KEY,'synthetic-local-key');

@@ -56,3 +56,7 @@ User intent and references govern direction. Expertise helps explain choices and
 ## Native creative configuration (2026-11-03)
 
 AppConfig in Electron owns a fixed userData/config.env path and returns safe model metadata. Narrow IPC opens/reloads the config or toggles a model; production revalidates an enabled configured selection before passing provider/model/key privately to Python. Default workspace uses an app-owned output directory. The active production tool set excludes the legacy fixed-scene compiler and exposes declarative HTML/CSS/SVG previews, optional contextual choices, voice and rendering. Model-authored HTML never runs in the privileged app DOM; the host rejects active content and adds its own seek code for CSS animations. See video-harness.md for limits and remaining audio/video-analysis work.
+
+## Deep Agents runtime update
+
+The active Python video runtime now uses Deep Agents SDK with explicit LangChain model adapters. Node retains Project grants, credentials, SQLite and production tools. Real Project image assets, three-frame draft/MP4 inspection, up to three versioned render attempts/request, native request-scoped streaming/Stop and persisted reasoning effort are implemented. See [Python runtime guide](python-agent-runtime.md) for exact limits and trust boundaries. Verification and live-provider quality are separate claims. Research/Tavily and richer creative skill content remain subsequent work.

@@ -5,7 +5,10 @@ export type WorkspaceListing = { directory: WorkspaceEntry; entries: WorkspaceEn
 export type WorkspacePreview = { entry: WorkspaceEntry; kind: FilePreviewKind; bytes: number; src?: string; text?: string };
 export type FolderProject = {id:string;name:string;folderName?:string;sourcePath?:string;outputPath?:string};
 export type ChatFileRef = {id:string;projectId?:string;name:string;relativePath:string;kind:'video'|'audio'|'image'|'text'};
+export type ProductionEvent={kind:'production';sessionId:string;requestId:string;type:string;text?:string;name?:string;stage?:string};
 export interface WorkspaceFilesBridge {
+  onProductionEvent?(callback:(event:ProductionEvent)=>void):()=>void;
+  setReasoning?(input:{effort:import('./native-models').ReasoningEffort}):Promise<NativeCatalog>;
   saveProvider?(input:ProviderConnection):Promise<NativeCatalog>;
   configCatalog?():Promise<NativeCatalog>;
   openConfig?():Promise<{opened:boolean}>;
@@ -15,7 +18,7 @@ export interface WorkspaceFilesBridge {
   videoStatus?():Promise<{configured:boolean;busy:boolean}>;
   loadVideoKeys?():Promise<{configured:boolean}|null>;
   produceVideo?(input:{projectId?:string;sessionId:string;requestId:string;text:string;attachments?:{id:string}[];provider?:NativeSelection["provider"];model?:string}):Promise<{text:string;projectId?:string;files?:ChatFileRef[];choices?:{question:string;options:{label:string;description:string}[]};artifact?:{id:string;title:string;url:string;hasVoice:boolean;files?:ChatFileRef[]}}>;
-  cancelVideo?():Promise<unknown>;
+  cancelVideo?(input?:{requestId:string}):Promise<unknown>;
   saveVideo?(input:{id:string;projectId:string}):Promise<{saved:boolean}>;
   videoArtifact?(input:{id:string;projectId:string}):Promise<{id:string;title:string;url:string;files?:ChatFileRef[]}>;
   projects():Promise<FolderProject[]>;

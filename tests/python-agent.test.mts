@@ -24,7 +24,7 @@ test('actual Python loop calls scoped Node memory tools, reopens SQLite and repl
 }));
 test('Python tool requests cannot authorize mutations or invent memory and malformed arguments are contained',async()=>fixture(async store=>{
  for(const [requestId,text,approvedTools] of [['denied','remember Milo',[]],['ungrounded','remember unknown',['remember_project_memory']],['malformed','malformed',['remember_project_memory']]] as const){
-  const result=await harness(store).run({requestId,text,approvedTools:[...approvedTools]});assert.equal(result.status,'completed');
+  const result=await harness(store).run({requestId,text,approvedTools:[...approvedTools]});assert.equal(result.status,text==='malformed'?'failed':'completed');if(text==='malformed')assert.equal(result.errorCode,'MODEL_ERROR');
  }
  assert.deepEqual(store.list({ownerId:session.ownerId,projectId:session.projectId}),[]);
  assert.ok(store.readTranscript(session).filter(m=>m.role==='toolResult').every(m=>m.isError===true));

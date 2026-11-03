@@ -60,6 +60,8 @@ if __name__ == "__main__":
         async def check():
             provider = OpenAIProvider("diagnostic-placeholder-not-a-real-key")
             await provider.close()
+            from diagnostics import check_graph
+            await check_graph()
         asyncio.run(check())
         print("me-studio-agent python sdk-ready protocol=1")
     else:

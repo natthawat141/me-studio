@@ -61,7 +61,8 @@ async function dispatch(method: string, raw: unknown): Promise<unknown> {
   if(method==='videoConfigure')return production.configure(raw);
   if(method==='videoStatus')return production.status();
   if(method==='videoProduce')return production.produce(raw);
-  if(method==='videoCancel')return production.cancel();
+  if(method==='videoCancel')return production.cancel(raw);
+  if(method==='videoShutdown')return production.shutdown();
   if(method==='videoArtifact')return production.artifact(raw);
   if (method === 'list') return projects.list();
   if (method === 'create') return projects.create(z.object({ title: z.string().trim().min(1).max(120) }).strict().parse(raw).title);

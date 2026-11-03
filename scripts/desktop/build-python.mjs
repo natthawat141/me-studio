@@ -4,7 +4,7 @@ import {resolve,join} from 'node:path';
 
 const python=resolve('.studio/python-env/bin/python');
 try{await access(python);}catch{throw Error('Run npm run agent:python-setup first');}
-execFileSync(python,['-m','PyInstaller','--noconfirm','--clean','--onedir','--name','me-studio-agent','--distpath','.studio/python-dist','--workpath','.studio/python-build','--specpath','.studio/python-build','--paths','python/me_studio_agent','python/me_studio_agent/worker.py'],{stdio:'inherit'});
+execFileSync(python,['-m','PyInstaller','--noconfirm','--clean','--onedir','--name','me-studio-agent','--distpath','.studio/python-dist','--workpath','.studio/python-build','--specpath','.studio/python-build','--collect-all','deepagents','--collect-submodules','langgraph','--collect-submodules','langchain','--collect-submodules','langchain_openai','--copy-metadata','deepagents','--copy-metadata','langchain','--copy-metadata','langchain-core','--copy-metadata','langchain-openai','--copy-metadata','langgraph','--paths','python/me_studio_agent','python/me_studio_agent/worker.py'],{stdio:'inherit'});
 const output=resolve('.studio/desktop-build/runtime/python-agent');
 await mkdir(resolve('.studio/desktop-build/runtime'),{recursive:true});
 await rm(output,{recursive:true,force:true});

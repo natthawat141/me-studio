@@ -1,21 +1,22 @@
 # Python agent runtime
 
-The active native video agent uses Python for its model/tool loop. React and Electron remain unchanged; Node continues to own permissions, SQLite persistence and production tools. This is a runtime migration, not a conversion of the whole backend.
+The active native video agent uses Deep Agents SDK in Python for its model/tool loop. React and Electron remain unchanged; Node continues to own permissions, SQLite persistence and production tools. This is a runtime migration, not a conversion of the whole backend.
 
 ## Ownership
 
 ```text
 Desktop chat → trusted Electron worker → runtime.mts (scope, SQLite, grants)
                                           ↕ private JSONL pipes
-                                  Python worker / async agent loop
+                                  Python worker / Deep Agents graph
                                           ↕ OpenAI Responses API
                                  configured provider/model, streaming
 
 Python tool request → Node allowlist/grants → memory or video tool
-                                             → reviewed Canvas HTML → MP4
+                                             → declarative HTML/CSS/SVG → MP4
 ```
 
-- `python/me_studio_agent/runtime.py`: bounded sequential loop, Responses streaming, transcript normalization and tool-call continuation.
+- `python/me_studio_agent/runtime.py`: Deep Agents graph, budget middleware, streaming and multimodal host-tool continuation.
+- `python/me_studio_agent/models.py`: explicit LangChain ChatOpenAI adapters for fixed provider endpoints.
 - `python/me_studio_agent/worker.py`: one-run JSONL subprocess, protocol version 1. No HTTP listener or arbitrary execution API.
 - `src/server/agent/runtime.mts`: trusted bridge. It validates scope/input, owns run IDs and durable status, checks grants independently and kills the child on cancellation/timeout.
 - `src/server/video/native-production.mts`: explicitly chooses the packaged Python executable. Missing Python fails visibly; there is no silent Pi fallback.
@@ -45,7 +46,7 @@ npm run desktop:build
 
 Staging first builds a PyInstaller onedir executable and its private Python/SDK libraries, then the Electron resources. Output: `release/mac-arm64/me studio.app`. End users need no Python, pip or venv installation. Only the build machine needs `agent:python-setup` first. This remains an unsigned Mac arm64 development build; other platforms and clean machines require separate verification.
 
-`agent:python-build` checks the frozen executable with `--version` and `--check` (SDK construction only, no network). Distribution licenses and the Python license are copied into `runtime/python-agent/notices`. Generated venv/dist/build data remain ignored in `.studio/`.
+`agent:python-build` checks the frozen executable with `--version` and `--check` (actual offline SDK graph, tool/image continuation and adapter construction, no network). Distribution licenses and the Python license are copied into `runtime/python-agent/notices`. Generated venv/dist/build data remain ignored in `.studio/`.
 
 ## Data and trust boundaries
 
@@ -64,3 +65,25 @@ See [dated evidence](plans/2026-11-03-python-agent-runtime.md). SDK tests use an
 Primary references checked 2026-11-03: [OpenAI Python SDK](https://github.com/openai/openai-python), [function calling](https://developers.openai.com/api/docs/guides/function-calling), [PyInstaller platform notes](https://pyinstaller.org/en/stable/feature-notes.html).
 
 Native model visibility and configuration are now described in [video-harness.md](video-harness.md). The Python provider receives the model/provider in private JSONL; run fingerprints and transcript metadata include both. OpenAI, OpenRouter and Meta use their fixed Responses endpoints. This does not make arbitrary endpoints or credentials accessible to the renderer.
+
+## Deep Agents configuration
+
+Pinned Deep Agents 0.7.32 and langchain-openai 1.7.3 own model/tool orchestration. SQLite remains the durable source for completed conversation history, request replay and scoped project memory. A fresh graph is constructed per request with that bounded history. There is no LangGraph server or hosted dependency.
+
+The graph has an in-memory StateBackend with scratch filesystem tools and write_todos. Scratch files are not Project files and do not persist across requests. The general-purpose subagent middleware is replaced; task, shell, execute and delete are unavailable. Host context middleware replaces automatic summarization so hidden model calls cannot exceed the request budget. Effective SDK tool schemas, instructions, history and text tool output all count toward context characters; normalized image bytes are bounded separately.
+
+`STUDIO_REASONING_EFFORT=auto|low|medium|high` is persisted in private config.env through a narrow native method. Auto omits reasoning settings; OpenAI/OpenRouter explicit effort is forwarded without silently changing it. Meta uses Auto until its effort contract is verified. Model support and provider entitlement remain provider-dependent. Non-Auto effort participates in request identity, while Auto preserves existing replay fingerprints.
+
+Production events carry sessionId and requestId. The UI streams partial Markdown into the current assistant message, replaces it with the final result, and ignores late events/results after Stop. Stop is request-scoped. Host shutdown is a separate worker-only action. Provider incomplete/failed responses, invalid tool calls and empty final answers fail explicitly; partial streamed text remains visible with a failure state.
+
+## Project assets and visual inspection
+
+Host Project tools list/read/write bounded creative text files and import raster images. Paths are relative to the host-selected Project source; hidden files, credentials, instruction files, build/dependency directories, traversal and symlinks are denied. Writes back up existing content before atomic replacement. These are task tools, not an expanded editable Files panel or an execution API.
+
+Normalized attached/imported images have stable content-addressed asset IDs. The model discovers their exact src through list_visual_assets. HTML allows those images only; the preview route and immutable render snapshot serve the allowlisted bytes, without opening network or arbitrary disk access. Limits: 6 attached images/request, 250 KB/normalized image, 20 registered images/chat. Project imports accept raster inputs up to 25 MB before normalization.
+
+inspect_animation returns three labelled images at the beginning, midpoint and ending. Draft inspection captures the saved HTML; after rendering it extracts frames from the actual current MP4 and returns ffprobe duration/stream metadata. A new edit marks the previous MP4 as stale for inspection. The agent can correct and render up to three times/request, retaining unique previous artifacts. This is evidence for model review, not an automated guarantee of visual quality or user approval. Inspection images do not enter durable transcripts or renderer events.
+
+Research/Tavily and expanded creative skills remain the next slice. Audio/video semantic understanding, arbitrary JS/Python execution, general browser automation, long-term SDK scratch memory and a durable job queue are not introduced by this migration.
+
+Primary SDK references: [Deep Agents customization](https://docs.langchain.com/oss/python/deepagents/customization), [backends](https://docs.langchain.com/oss/python/deepagents/backends), [models](https://docs.langchain.com/oss/python/deepagents/models), [streaming](https://docs.langchain.com/oss/python/deepagents/streaming). Exact installed contracts are tested offline, including SDK Command results and Responses incomplete status.

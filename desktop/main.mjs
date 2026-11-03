@@ -112,9 +112,10 @@ else {
         if(method==='configCatalog')return {ok:true,value:await configOperation(async()=>(await reloadConfig()).catalog)};
         if(method==='configOpen'){await openConfig();return {ok:true,value:{opened:true}};}
         if(method==='configProvider')return {ok:true,value:await configOperation(async()=>{await appConfig.saveProvider(input);return (await reloadConfig()).catalog;})};
+        if(method==='configReasoning')return {ok:true,value:await configOperation(async()=>{await appConfig.reasoning(input?.effort);return (await reloadConfig()).catalog;})};
         if(method==='configToggle')return {ok:true,value:await configOperation(async()=>{await appConfig.toggle(input?.provider,input?.model,input?.enabled);return (await reloadConfig()).catalog;})};
         if(method==='videoStatus'){await configOperation(reloadConfig);return {ok:true,value:await request('videoStatus')};}
-        if(method==='videoCancel')return {ok:true,value:await request('videoCancel')};
+        if(method==='videoCancel')return {ok:true,value:await request('videoCancel',{requestId:input?.requestId})};
         if(method==='videoKeys'){
           const picked=await dialog.showOpenDialog(window,{title:'โหลดคีย์ AI เขียนฉากและเสียงจากไฟล์ .env',properties:['openFile']});
           if(picked.canceled||!picked.filePaths[0])return {ok:true,value:null};
@@ -130,7 +131,7 @@ else {
           let project=(await projectFolders.list()).find(p=>p.id===input.projectId);
           if(input.projectId&&!project)throw Error('INVALID_PROJECT');
           if(!project){const sourcePath=join(app.getPath('userData'),'workspace');await mkdir(sourcePath,{recursive:true});project={id:'00000000-0000-4000-8000-000000000001',sourcePath,outputPath:join(sourcePath,'output')};}
-          const result=await request('videoProduce',{projectId:project.id,sessionId:input.sessionId,requestId:input.requestId,text:input.text,provider,model,media,source:project.sourcePath,outputRoot:project.outputPath});
+          const result=await request('videoProduce',{projectId:project.id,sessionId:input.sessionId,requestId:input.requestId,text:input.text,provider,model,reasoning:provider==='meta'?'auto':c.catalog.reasoning||'auto',media,source:project.sourcePath,outputRoot:project.outputPath});
           if(result.artifact)result.artifact.files=await videoFileReferences(result.artifact.id,project.id);
           if(result.previews)result.files=await Promise.all(result.previews.map(path=>chatFiles.register(path,project.outputPath,project.id)));
           delete result.previews;
@@ -204,7 +205,7 @@ else {
       if (state.busy) {
         const answer = await dialog.showMessageBox(window, { type: 'question', message: 'มีงานกำลังทำอยู่', detail: 'ออกจากแอปจะยกเลิกงานที่กำลังทำ', buttons: ['ทำงานต่อ', 'ยกเลิกงานและออก'], defaultId: 0, cancelId: 0 });
         if (answer.response === 0) return;
-        await request('cancel', {}).catch(() => {}); await request('cancelChat', {}).catch(() => {});await request('videoCancel', {}).catch(() => {});
+        await request('cancel', {}).catch(() => {}); await request('cancelChat', {}).catch(() => {});await request('videoShutdown', {}).catch(() => {});
       }
       quitting = true;
       if (worker?.connected) worker.disconnect();

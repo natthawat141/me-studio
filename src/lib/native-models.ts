@@ -10,5 +10,6 @@ export const metaChatModels=[{id:'muse-spark-1.3-contributor',label:'Muse Spark 
 export type ProviderConnection={provider:'openai'|'openrouter'|'meta'|'elevenlabs';apiKey:string;modelId?:string;modelLabel?:string};
 export type NativeModel = {id:string;label:string;enabled:boolean};
 export type NativeProvider = {id:string;name:string;configured:boolean;models:NativeModel[]};
-export type NativeCatalog = {providers:NativeProvider[];defaultProvider:string;defaultModel:string;voiceConfigured:boolean};
+export type ReasoningEffort='auto'|'low'|'medium'|'high';
+export type NativeCatalog = {reasoning?:ReasoningEffort;providers:NativeProvider[];defaultProvider:string;defaultModel:string;voiceConfigured:boolean};
 export type NativeSelection = {provider:string;model:string};

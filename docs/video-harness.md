@@ -34,3 +34,7 @@ Native attachments are stored and viewed inline. Sending images/text enters the 
 ## Response presentation
 
 Assistant responses are stored as Markdown and rendered with react-markdown/remark-gfm, including headings, emphasis, lists, tables and code. Raw HTML and Markdown image loads are disabled; local media uses scoped file cards. Historical wording stays intact. Creative instructions favor a concrete recommendation with brief-specific reasoning, visual motivation/pacing/setup/payoff, and concise shot tables where useful. Proposed timing remains a suggestion. Generic flattery and emoji are discouraged by default. These are instructions, not a measured claim that the model's creative reasoning improved.
+
+## Deep Agents runtime update
+
+The active Python video runtime now uses Deep Agents SDK with explicit LangChain model adapters. Node retains Project grants, credentials, SQLite and production tools. Real Project image assets, three-frame draft/MP4 inspection, up to three versioned render attempts/request, native request-scoped streaming/Stop and persisted reasoning effort are implemented. See [Python runtime guide](python-agent-runtime.md) for exact limits and trust boundaries. Verification and live-provider quality are separate claims. Research/Tavily and richer creative skill content remain subsequent work.

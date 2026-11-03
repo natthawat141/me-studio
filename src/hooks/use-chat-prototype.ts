@@ -12,7 +12,20 @@ export function useChatPrototype() {
   const [ready, setReady] = useState(false);
   const [storageError, setStorageError] = useState('');
   const [pendingId, setPendingId] = useState<string>();
-  const nativeRequest=useRef<string|undefined>(undefined);
+  const nativeRequest=useRef<{requestId:string;sessionId:string;assistantId:string;userId:string;streamed:string}|undefined>(undefined);
+  const [productionStage,setProductionStage]=useState<{sessionId:string;text:string}>();
+  useEffect(()=>window.meStudioFiles?.onProductionEvent?.(event=>{
+    const request=nativeRequest.current;
+    if(!request||event.requestId!==request.requestId||event.sessionId!==request.sessionId)return;
+    if(event.type==='text_delta'&&typeof event.text==='string'){
+      request.streamed=(request.streamed+event.text).slice(0,100000);
+      const text=request.streamed;
+      setState(s=>({...s,threads:s.threads.map(t=>t.id===request.sessionId?{...t,messages:t.messages.some(m=>m.id===request.assistantId)?t.messages.map(m=>m.id===request.assistantId?{...m,text}:m):[...t.messages,{id:request.assistantId,role:'assistant',text}]}:t)}));
+    }
+    if(event.type==='tool_start')setProductionStage({sessionId:request.sessionId,text:event.name==='render_video'?'กำลังเรนเดอร์วิดีโอ':event.name==='inspect_animation'?'กำลังตรวจภาพผลงาน':'กำลังทำงาน'});
+    if(event.type==='tool_end')setProductionStage(undefined);
+    if(event.type==='render')setProductionStage({sessionId:request.sessionId,text:'กำลังเรนเดอร์วิดีโอ'});
+  }),[]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     queueMicrotask(() => {
@@ -69,20 +82,33 @@ export function useChatPrototype() {
   }
   function sendProduction(projectId?:string,files:ChatFileRef[]=[],selection?:NativeSelection,textOverride?:string) {
     if(!ready||pendingId||(!(textOverride??active.draft).trim()&&!files.length)||!window.meStudioFiles?.produceVideo)return false;
-    const id=active.id,text=(textOverride??active.draft).trim()||'ช่วยดูไฟล์ที่แนบให้หน่อย',requestId=crypto.randomUUID();nativeRequest.current=requestId;setPendingId(id);
-    const userMessageId=crypto.randomUUID();
+    const id=active.id,text=(textOverride??active.draft).trim()||'ช่วยดูไฟล์ที่แนบให้หน่อย',requestId=crypto.randomUUID();setPendingId(id);
+    const userMessageId=crypto.randomUUID(),assistantId=crypto.randomUUID();
+    nativeRequest.current={requestId,sessionId:id,assistantId,userId:userMessageId,streamed:''};
     const references=files.length?files:[...active.messages].reverse().find(m=>m.role==='user'&&m.files?.length)?.files??[];
     setState(s=>{const next=commitChatMessage(s,active,{id:userMessageId,role:'user',text,delivery:'sent',...(files.length?{files}:{})});return textOverride?{...next,threads:next.threads.map(t=>t.id===id?{...t,draft:active.draft}:t)}:next;});
     void window.meStudioFiles.produceVideo({projectId,sessionId:id,requestId,text,attachments:references.map(f=>({id:f.id})),...selection}).then(result=>{
-      setState(s=>({...s,threads:s.threads.map(t=>t.id===id?{...t,messages:[...t.messages,{id:crypto.randomUUID(),role:'assistant',text:result.text.slice(0,8000),...(result.files?.length?{files:result.files}:{}),...(result.choices?{choices:result.choices}:{}),...(result.artifact?{artifacts:[{id:result.artifact.id,title:result.artifact.title,kind:'video' as const,src:result.artifact.url,poster:'' as const,nativeProjectId:result.projectId??projectId,files:result.artifact.files}]}:{})}]}:t)}));
-    }).catch(()=>setState(s=>({...s,threads:s.threads.map(t=>t.id===id?{...t,messages:[...t.messages.map(m=>m.id===userMessageId?{...m,delivery:'failed' as const}:m),{id:crypto.randomUUID(),role:'assistant',text:'ส่งให้ AI ไม่สำเร็จ หรือถูกหยุด กรุณาตรวจการเชื่อมต่อ AI และลองใหม่'}]}:t)}))).finally(()=>{if(nativeRequest.current===requestId)setPendingId(undefined);});return true;
+      if(nativeRequest.current?.requestId!==requestId)return;
+      const message={id:assistantId,role:'assistant' as const,text:result.text.slice(0,100000),...(result.files?.length?{files:result.files}:{}),...(result.choices?{choices:result.choices}:{}),...(result.artifact?{artifacts:[{id:result.artifact.id,title:result.artifact.title,kind:'video' as const,src:result.artifact.url,poster:'' as const,nativeProjectId:result.projectId??projectId,files:result.artifact.files}]}:{})};
+      setState(s=>({...s,threads:s.threads.map(t=>t.id===id?{...t,messages:t.messages.some(m=>m.id===assistantId)?t.messages.map(m=>m.id===assistantId?message:m):[...t.messages,message]}:t)}));
+    }).catch(()=>{
+      if(nativeRequest.current?.requestId!==requestId)return;
+      const partial=nativeRequest.current.streamed;
+      setState(s=>({...s,threads:s.threads.map(t=>t.id===id?{...t,messages:[...t.messages.filter(m=>m.id!==assistantId).map(m=>m.id===userMessageId?{...m,delivery:'failed' as const}:m),{id:assistantId,role:'assistant',text:(partial?partial+'\n\n':'')+'การทำงานไม่สำเร็จ กรุณาตรวจการเชื่อมต่อ AI และลองใหม่'}]}:t)}));
+    }).finally(()=>{if(nativeRequest.current?.requestId===requestId){nativeRequest.current=undefined;setPendingId(undefined);setProductionStage(undefined);}});return true;
   }
+
   function attach(files:ChatFileRef[]){
     if(!ready||pendingId||!files.length)return false;
     const text=active.draft.trim();
     setState(s=>commitChatMessage(s,active,{id:crypto.randomUUID(),role:'user',text,files}));return true;
   }
-  function stop() { if(pendingId)void window.meStudioFiles?.cancelVideo?.(); if (timer.current) clearTimeout(timer.current); timer.current = null; setPendingId(undefined); }
+  function stop() {
+    const request=nativeRequest.current;nativeRequest.current=undefined;
+    if(request){void window.meStudioFiles?.cancelVideo?.({requestId:request.requestId});setState(s=>({...s,threads:s.threads.map(t=>t.id===request.sessionId?{...t,messages:t.messages.map(m=>m.id===request.assistantId?{...m,text:m.text+'\n\nหยุดแล้ว'}:m)}:t)}));}
+    if(timer.current)clearTimeout(timer.current);timer.current=null;setPendingId(undefined);setProductionStage(undefined);
+  }
+
   function rename(id: string, title: string) {
     if (!title.trim()) return;
     setState(s => ({ ...s, threads: s.threads.map(t => t.id === id ? { ...t, title: title.trim().slice(0, 80) } : t) }));
@@ -106,7 +132,7 @@ export function useChatPrototype() {
     setState(s => s.preferences.collapsedProjects[id] ? { ...s, preferences: { ...s.preferences, collapsedProjects: { ...s.preferences.collapsedProjects, [id]: false } } } : s);
   }
   return {
-    state, active, activeId, sendProduction, attach, setActiveId, newChat, draft, send, stop, pendingId, ready, storageError, rename, deleteChat, provider, toggleProject, revealProject,
+    state, active, activeId, productionStage, sendProduction, attach, setActiveId, newChat, draft, send, stop, pendingId, ready, storageError, rename, deleteChat, provider, toggleProject, revealProject,
     selectProvider: (id: string) => setState(s => ({ ...s, selectedProvider: id })),
     preferences: (patch: Partial<ChatPrototypeState['preferences']>) => setState(s => ({ ...s, preferences: { ...s.preferences, ...patch } })),
   };
