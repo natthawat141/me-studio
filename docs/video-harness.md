@@ -1,29 +1,32 @@
-# Local video harness V1
+# Conversational video harness
 
-Pi 1.4 owns the bounded model/tool loop. The host owns local Project directory grants, OpenAI GPT-6 Luna transport, SQLite session memory, skills, the deterministic HTML compiler and FFmpeg. Original archive files are references and remain intact.
+me studio is a creative collaborator. The user supplies intent and references; the agent discusses, clarifies consequential unknowns, suggests reasoned choices and executes when asked. There is no universal interview, forced approval wizard, default eight-second clip, fixed cast or preset background.
 
-## Actual tools
+## Native configuration
 
-- read_video_skills: reads four bounded Project reference files, never grants permissions.
-- save_animation: validates a storyboard with two characters, 3–30 sec, portrait/landscape, city-night/day-park/office backgrounds, timed dialogue and idle/wave/walk actions. Compiles host-owned Canvas HTML exposing seek(ms). Strings cannot inject executable code.
-- synthesize_voice: ElevenLabs eleven_v3 Thai speech; caps calls, checks duration against each cue, reports errors rather than silently claiming audio.
-- render_video: one immutable render per request; H.264 yuv420p/AAC at 24fps, 540x960 or 960x540. Snapshots inputs and verifies output with ffprobe.
-- trim_video: trims the current rendered output to validated seconds, preserving audio, producing a new MP4. It does not accept arbitrary shell/FFmpeg arguments or paths.
+The File menu, top navigation, Files header and Settings → AI providers can open `config.env` in the application userData directory. It is a private local file (0600), excluded from source and packaging. Existing credential-file import remains available on older preview UI; new native configuration reloads on focus, explicit refresh and before sending. Neither keys nor config contents are sent to the renderer. Presence of a key is not verified account access.
 
-Project skills live in `.me-studio/skills/{storyboard,html-animation,voice-edit,video-render}/SKILL.md`; initialization preserves overrides and rejects symlink escapes. Defaults are in the application's skills directory. These are runtime creative references, distinct from repository AGENTS.md and the assistant's private memory. Existing scoped SQLite memory remains in native userData, with Project/session identity set by the host.
+An in-app connection form accepts a new API key without reading an existing key back into the renderer. Unconfigured providers show a key-entry action; their model switches appear after saving. `OPENAI_API_KEY`, `OPENROUTER_API_KEY` and `META_API_KEY` enable their respective model groups. Native OpenAI defaults include GPT-6 Luna, GPT-6.1 Sol, GPT-6.1 Terra, GPT-6 Astra and GPT-6 Sol. Settings search/toggles persist enabled flags in the file. Only enabled models with a provider key appear in the composer. The selected provider/model travels through the trusted host to Python; fixed endpoints are not renderer-controlled. OpenRouter model IDs are explicitly added via `STUDIO_CHAT_MODELS`; model/tool support varies by provider. Native Meta also uses a fixed Responses endpoint; Muse Spark/Wonder IDs are seeded. Contributor rows state their data-training mode. Custom forms in legacy web routes are separate.
 
-## Try it
+`STUDIO_DEFAULT_CHAT_PROVIDER`, `STUDIO_DEFAULT_CHAT_MODEL`, `STUDIO_OPENAI_MODELS`, `STUDIO_CHAT_MODELS`, `ELEVENLABS_API_KEY`, `STUDIO_SPEECH_VOICE_ID`, `STUDIO_SPEECH_MODEL`, `STUDIO_SPEECH_LANGUAGE` configure native operation. Model entries are `{id,label,enabled}`. The browser catalog has a separate schema; do not copy native enabled flags into legacy web env lists.
 
-`npm run video:produce -- /absolute/path/to/a/project "สร้างการ์ตูน 8 วินาที..."`
+## Conversation and tools
 
-CLI loads the existing ignored app `.env.local` explicitly. It needs OPENAI_API_KEY and optionally ELEVENLABS_API_KEY. Never copy env into packaged assets.
+- `/style`, `/voice`, `/preview`, `/skills` are discoverable by typing `/`. Arrows/Enter choose a command without sending it; IME/repeated Enter remain protected. Natural language is equally valid.
+- `present_options` displays a contextual question and clickable choices. Users can select, mix or reject them in ordinary chat. Choosing a card preserves an existing text draft.
+- `save_html_animation` creates original declarative HTML/CSS/inline SVG with CSS keyframe animations, then returns a real screenshot in chat. No fixed character, background, composition or duration is imposed. The model does not author executable JavaScript.
+- `read_current_animation` exposes the latest draft or a numbered earlier version. Up to 20 versions are retained per conversation in the Project's internal skills directory. Choosing a previous direction must restore that version, rather than continuing the most recently generated comparison.
+- `read_video_skills` loads bundled/project references and enabled status. `set_video_skill` changes project-specific skill preferences when requested. Skills do not grant tool/file permissions. Existing project overrides are preserved.
+- `synthesize_voice` uses the configured ElevenLabs voice/model/language. It refuses missing keys, missing narration and speech exceeding its cue; failures must not silently become narrated output.
+- `render_video` renders verified H.264/AAC MP4 locally. One render per request; current creative limit is 60 seconds, 320–1280 even pixel dimensions and 24 fps. This is a technical bound, not an eight-second product default.
+- `save_animation` and its two-character Canvas schema remain only as a legacy test/CLI compatibility path. They are excluded from the active native agent tool list.
 
-Desktop: select/create a folder Project → Settings → AI providers → เชื่อมต่อ AI สร้างวิดีโอ → choose the local env file in the native picker. Keys remain worker-memory only and must be loaded again after restart. OpenAI is selected explicitly. Send a brief in that Project. The artifact opens in the right player; Download MP4 opens a native Save dialog. Original sample conversations are retained and unconfigured mode stays clearly labelled as a prototype.
+The host parses HTML in an inert document and rejects active elements/handlers and external resources. A trusted seek implementation advances CSS animations. Chromium runs outside the privileged Electron UI with sandboxing, blocked networking and no downloads/service workers; the existing FFmpeg path snapshots explicit inputs. This is not a general shell/Python/JavaScript execution service.
 
-Source and output roots come from the native Project registry, never tool arguments. Output versions are written beneath the configured output folder. Artifact IDs are persisted in native userData and resolved to fresh scoped media URLs on reopen; native Save uses that registry rather than renderer paths. Generation is one local request at a time, cancellable; API/model/tool limits bound work. This local app is not a multi-tenant SaaS service.
+Conversation can start in Default workspace without creating a Project. Folder Projects retain their scoped local output. Ordinary discussion creates no animation version directory. Only produced preview images and the final video are presented in chat; manifests/source/working notes remain in Files.
 
-## Evidence / limits
+## Verification and limits
 
-2026-11-03: actual OpenAI/Pi tool loop → ElevenLabs Thai audio → 8-second MP4 completed. The run used 5 model calls, 4 tool calls, reported 982 input and 393 output tokens. Output was probed and 8 representative frames including the ending were inspected; this is a basic template cartoon, not arbitrary animation-code generation. Full speech intelligibility and native end-to-end verification should be reported separately.
+See [implementation evidence](plans/2026-11-03-creative-config.md). The Python demo now authors a typography-based HTML animation and renders a real three-second MP4 with an offline scripted provider. Creative smoke checks reject active/external HTML and restore a draft across requests before rendering. These checks do not measure creative quality or verify live provider entitlement. API keys remain local and provider error bodies remain private.
 
-V1 edits structured scenes and trims generated clips. Arbitrary Python/shell, arbitrary generated HTML execution, imported clip assembly, lip-sync phonemes, multi-track editor and cloud sync are not implemented. Source attachments remain filename-only prototype data and are rejected by the live flow rather than claimed as uploaded.
+Native image/video attachments can be stored and viewed inline. Model analysis of those attachments, arbitrary imported-clip assembly, external image search, phoneme lip-sync, a multitrack editor, cloud sync and arbitrary generated-code execution remain unimplemented. The available tools must be described honestly by the agent.

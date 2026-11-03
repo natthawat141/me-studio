@@ -1,100 +1,62 @@
-# คู่มือเริ่มงานสำหรับ AI ที่พัฒนา me studio
+# me studio — product contract
 
-ใช้ [AGENTS.md](../AGENTS.md) เป็นกติกาหลัก และตรวจโค้ดจริงก่อนสรุปความสามารถ สถานะด้านล่างตรวจจากโค้ดวันที่ 2026-11-03; ผลทดสอบในแผนเก่าเป็นหลักฐานของรอบนั้น ไม่รับรอง checkout ปัจจุบันโดยอัตโนมัติ
+## Outcome
+Thai-first AI cartoon studio: a user supplies a brief, reviews a storyboard and estimate, approves generation, then watches and revises a versioned video. Users do not install agent skills themselves.
 
-## อ่านอะไรตามลำดับ
+Current priority (2026-11-03): a chat-first Mac desktop frontend for hackathon validation. Home → conversation → click a labelled artifact → optional right preview. Folder Projects group chats and a user-selected local directory; no manual scene form is required. Familiar chat layout, white content, light translucent sidebar and Prompt Kit composer; see [current frontend plan](docs/plans/2026-11-03-chat-first-frontend.md). Native video chat now uses a Python agent loop; see docs/python-agent-runtime.md. Hosted SaaS criteria below remain future targets.
 
-1. [AGENTS.md](../AGENTS.md): ขอบเขตงาน กติกา UI/data/security และคำสั่งตรวจงาน
-2. [PRODUCT.md](../PRODUCT.md), [DESIGN.md](../DESIGN.md): หน้าหลักที่ยอมรับแล้วและความสามารถที่มีจริง
-3. [architecture.md](architecture.md): เส้นทางข้อมูลและสิ่งที่ยังเป็นเป้าหมาย
-4. กติกาใกล้ไฟล์ที่จะเปลี่ยน: [UI](../src/components/AGENTS.md), [native desktop](../desktop/AGENTS.md), [server/harness/memory](../src/server/AGENTS.md)
-5. [CONTRIBUTING.md](../CONTRIBUTING.md), [ACCEPTANCE.md](ACCEPTANCE.md), แผน/ADR ที่ตรงกับงาน แล้วอ่าน implementation และ tests
+The `/desktop` screen preserves unconfigured sample chat separately from explicitly connected native Project sessions. Settings allow a local credential file to connect OpenAI and optional ElevenLabs; other provider forms remain metadata. Draft/history/preferences use the separate `me-studio.chat-ui.v1` key. Native attachments retain actual bytes through scoped local file IDs. Existing browser/native projects are preserved; the legacy `/` studio remains separate.
 
-แอปและ Git root คือ `cartoon-studio/` ไม่ใช่ parent `aicatoon/` ตรวจ pwd, git status และ package.json ก่อนทำงาน รักษาไฟล์ที่ผู้ใช้หรือแชตอื่นแก้ค้างไว้
+The active video harness is Python plus a trusted Node bridge and scoped SQLite foundation. Pi remains only for the separate legacy Meta path. This is not a public service or general code-execution agent. See docs/python-agent-runtime.md and docs/agent-harness.md.
 
-## หน้าที่ของเอกสาร
+## Canonical workflow
+Brief → script/storyboard revision → voice/output settings → server quote → explicit approval → queued/running job → video artifact → revision/new version.
+- Project groups conversations, assets, storyboards and generations. It is not a single video.
+- Conversation has messages; each generation captures an immutable input/model/storyboard version.
+- User-uploaded media, bundled examples and generated output have distinct provenance.
+- Quotes expire; approval authorizes one quote/version. A changed brief needs a new quote. The server owns reservations, debits and refunds; retry never double-charges.
+- Provider means the service receiving the request; model means its model ID. Meta Model API is a distinct provider for Muse models; Llama is a model family. Configuration supports Meta directly and OpenRouter, with provider-specific IDs. See docs/model-research-2026-11-01.md; direct inference is not implemented.
+- Voice identity, speech model and chat model are separate settings. Provider catalogs and language support are discovered/validated; never invent model versions.
 
-| เอกสาร | เก็บอะไร |
-| --- | --- |
-| AGENTS.md และไฟล์ย่อย | กติกาที่ใช้ซ้ำระยะยาว ไม่ใช่รายงานความคืบหน้า |
-| CLAUDE.md / GEMINI.md / .github/copilot-instructions.md | จุดเข้าของเครื่องมือ อ้างอิงกติกาหลัก ไม่เขียนคู่มือซ้ำ |
-| PRODUCT.md / DESIGN.md | ขอบเขตและสถานะผลิตภัณฑ์ / visual และ interaction ที่ยอมรับ |
-| docs/architecture.md / docs/agent-harness.md | ชั้นระบบ / API และ invariants ของ harness และ product memory |
-| docs/plans/ / docs/decisions/ | แผน/หลักฐานตามวันที่ / เหตุผลการตัดสินใจสถาปัตยกรรม |
-| docs/model-research-* | Primary sources, วันที่และ exact model/voice/API IDs |
+## Preview decision
+Desktop sidebar interaction update (2026-11-03): Project headers are disclosure controls, not conversation navigation. The write action starts/resumes a Project draft, persisted separately from sent threads. Empty folders display “ไม่มีแชต”; only sending creates a history row. Legacy unsent threads migrate to drafts without changing their IDs/text or removing data. Search can recover saved drafts. Browsing/collapsing folders preserves the active transcript and player; disclosure state and sidebar scroll persist. All desktop chats are grouped, with existing general chats shown in Default workspace without rewriting native scope or moving files. The fixed shell/composer stays mounted while only the new transcript fades in; switching restores its scroll position. Open artifact panels remain until explicitly closed. Directory Projects are still required for connected video production.
 
-AGENTS.md เป็นคำแนะนำให้ AI **ที่เขียนโค้ดให้เรา** ไม่ใช่ runtime memory ของ AI ในผลิตภัณฑ์ และไม่ใช่สิทธิ์ให้รัน shell/อ่านไฟล์/ใช้เงิน Product memory เป็น SQLite ภายใต้ trusted host scope; ห้ามนำ repository instructions ไปใส่ prompt แล้วถือว่าแก้ authorization แล้ว
+For `/desktop`, the right preview starts closed; an explicit artifact click or the Files button opens it. Sample artifacts remain labelled examples. The native Mac app lets users choose a local folder, browse/filter its files and play existing video/audio or preview images/text beside chat. Folder Projects retain their identity and associated chats across app restarts; users can select a new folder if the original moves. HTML/Python are read-only source text; arbitrary HTML execution remains unavailable; supported native generation uses a trusted compiler. The ordinary web prototype requires the desktop bridge for folder Projects. AI configuration lives in the category-based Settings dialog. Existing-file previews and generated native artifacts share the local player.
 
-## ระบบปัจจุบันมีอะไรจริง
+Legacy `/` retains the project Agent settings gear and project video panel; these older controls are not the accepted desktop V1 UX. Do not execute generated HTML in the application DOM. HTML preview and MP4 rendering have independent acceptance criteria.
 
-| ส่วน | สถานะและข้อจำกัด | จุดเริ่มอ่าน |
-| --- | --- | --- |
-| Desktop Home/chat/search/settings | Frontend ทดลอง flow ได้ คำตอบ/ผลงานเป็นตัวอย่าง Settings เก็บ metadata, key input ปิดอยู่ | [desktop-screen.tsx](../src/components/studio/desktop-screen.tsx), [use-chat-prototype.ts](../src/hooks/use-chat-prototype.ts) |
-| Native Files / video player | อ่านโฟลเดอร์ที่เลือกจริง เปิด media/text จริง ไม่อัปโหลดและไม่เขียนไฟล์ | [workspace-panel.tsx](../src/components/preview/workspace-panel.tsx), [workspace-files.mjs](../desktop/workspace-files.mjs) |
-| Provider catalog | Safe metadata/defaults จาก config; key presence ไม่ใช่ successful inference | [provider-config.ts](../src/lib/provider-config.ts), [config.ts](../src/server/config.ts) |
-| Harness + memory | Pi loop + scoped SQLite กับ offline scripted streams มี grants/budgets/revisions/idempotency | [runtime.mts](../src/server/agent/runtime.mts), [store.ts](../src/server/memory/store.ts) |
-| Native worker / Meta adapter | มี implementation แยกและ dormant; desktop chat ไม่เรียก ไม่ใช่ live end-to-end verification | [worker.mts](../desktop/worker.mts), [meta-provider.mts](../src/server/agent/meta-provider.mts) |
-| Reviewed HTML/audio → MP4 | CLI/worker renderer แยก ใช้ input ที่ตรวจแล้ว ไม่ใช่ sandbox สำหรับโค้ด AI ทั่วไป | [render.mjs](../scripts/local/render.mjs), [local-development.md](local-development.md) |
-| Terminal / general browser / Python tool execution | ยังไม่มีใน desktop V1 และไม่ใช่ Files panel | ต้องกำหนด scope/permission/runtime ก่อนเพิ่ม |
-| Cloud accounts / sync / billing / durable queue | ยังไม่ได้ทำเป็น SaaS | PRODUCT.md และ architecture.md ระบุ target ไม่ใช่ระบบที่เปิดใช้แล้ว |
+## Deployment modes
+- SaaS: service-owned provider keys; authenticated tenants, server-side permissions, per-user budgets and usage ledger. Users select operator-approved models.
+- Self-hosted: same domain/API; operator supplies environment secrets and permitted model IDs. Future authenticated owner UI can manage encrypted credentials. Editing preferences is not connecting a provider.
+- Demo: no provider requests or real billing; examples labelled, cancellation and local persistence still work.
 
-หลักฐานรอบก่อน: [Files panel](plans/2026-11-03-files-panel.md), [frontend](plans/2026-11-03-chat-first-frontend.md), [command search](plans/2026-11-03-command-search.md), [provider standby](plans/2026-11-03-provider-standby.md) และ [model research](model-research-2026-11-03.md) ตรวจใหม่เมื่อแก้ส่วนที่เกี่ยวข้อง
+## Current status
+Implemented: chat-first desktop, folder Projects, persisted attachments, inline media/native file preview, explicitly connected Python video harness with scoped SQLite memory and Project skills, HTML-to-MP4/voice/trim tools and versioned local output. The reviewed-input CLI remains available. No tenant auth, hosted application database, credit accounting, durable queue or arbitrary generated-code sandbox. Native Python orchestration is verified offline; account entitlement/live inference after migration is a separate check. See docs/video-harness.md for supported scene limits.
 
-## UX ที่ต้องรักษา
+## MVP release criteria
+A new account can create an owned project, obtain a reviewed storyboard/quote, approve exactly once, receive a real video, revise it without losing earlier versions, and recover from failed/cancelled jobs. Ownership must hold across every project/file/job endpoint. Self-host setup must work from documented env examples. See docs/ACCEPTANCE.md.
 
-- เปิดแอปเป็น Home และช่องเริ่มแชต ใช้ **แชตใหม่** ไม่ต้องสร้าง Project ก่อนเริ่มแชต และไม่มีฟอร์มกรอกบทพูดทีละตัวละคร
-- ขาว/สว่าง sidebar โปร่งแบบ Mac ตัวอักษรน้ำหนักปกติ ไอคอนเส้นบางสีเดียว ไม่เติม emoji, หัวข้อประดับ, gradient/card หรือขอบหนาโดยพลการ
-- Sidebar / chat / optional right panel; ศึกษา DeepSeek/ChatGPT เป็น reference โดยไม่เปลี่ยนแอปเป็น upstream fork
-- Navigation ด้านบนใช้ `layout/desktop-navigation` แถวเดียวทั้งหน้าต่าง แยกปุ่มเปิดแผง Files ออกจากปุ่มซ่อนรายการไฟล์ภายในแผง เมื่อยุบประวัติแชตบน desktop จะเหลือ icon rail; ซ่อน tree ต้องไม่สร้าง video element ใหม่
-- Composer ใช้ Prompt Kit ที่มีแล้ว dialog/menu ใช้ Base UI/shadcn ไอคอน Lucide ตรวจของเดิมก่อนสร้าง primitive
-- แผงขวาปิดตอนเริ่ม เปิดเมื่อเรียก Files หรือกด artifact; รักษาร่างแชต การปิด–เปิดและ focus return
-- Hover/focus เป็นเทากลาง รวม dialog ผ่าน portal ห้ามแก้ด้วยการลบ focus indication
-- Settings รองรับหลาย provider แยก configuration จาก model choice ไม่บังคับ Meta อย่างเดียว
-- Backend harness เป็น Python ได้ในอนาคต แต่การเปลี่ยนภาษาไม่ใช่ prerequisite ของงาน frontend หรืองานแถม
+## Project Agent settings
+Optional validated settings on each Project: confirmation policy (always or paid-only), chat-model override, image/video aspect ratios and output counts. Legacy projects use safe defaults without forced migration. Controls save on change; failures do not replace the prior settings. Chat requests include a settings snapshot. Paid-only means free work can skip an extra confirmation; it does not authorize charging and does not bypass server quotes/approvals. Image/video model selection remains unavailable until actual service capabilities are integrated.
 
-DESIGN.md เป็น source of truth หากผู้ใช้แก้ direction ให้ปรับ canonical docs พร้อม implementation แทนการสะสมข้อยกเว้นหลายไฟล์
+Desktop Project directory settings persist the chosen source and output directories through native pickers. Source controls the current read-only Files tree. Configured native generation writes immutable versions under the selected output directory; unconfigured sample chat does not write there.
 
-## เส้นทางข้อมูล
+## Video harness V1 (current; supersedes early frontend-only scope above)
 
-### หน้าสนทนาตัวอย่าง
+Desktop is a conversational creative agent with optional directory Projects. Local config.env selects OpenAI/OpenRouter models and ElevenLabs voice settings; model visibility is editable in Settings. Python can discuss a brief, present clickable choices, author original HTML/CSS/SVG animation, share real previews, restore per-chat versions and render MP4. Native unconfigured sends preserve the draft and request configuration. Browser-only previews remain labelled samples. See [video harness](docs/video-harness.md) for exact capability and verification boundaries.
 
-`/desktop` → `DesktopScreen` → `use-chat-prototype` → validated local state/storage
+The active model/tool loop is Python. Node still owns tools, memory, scopes and rendering; the app bundles the Python runtime. This is not a complete Python backend rewrite. Native media/file previews and persisted attachments are available. Live Pi evidence predates this migration; Python offline render checks do not prove live provider access.
 
-Key `me-studio.chat-ui.v1` แยกจาก legacy/native projects อย่าล้าง/ย้ายข้อมูลเพื่อแก้ UI ข้อมูลอ่านไม่ได้ต้องรายงานและเก็บต้นฉบับ Attachments เก็บ bytes ใน memory ของแชต หลังส่งมีเพียงชื่อไฟล์ ไม่ใช่ upload/persisted asset
+Native agent-capable chat refreshes worker credential status before every text send. Cached UI state never selects sample mode. Disconnected, unavailable, wrong-provider or missing-Project states retain the draft and explain the required setup. Native attachment viewing remains separate; browser/read-only previews keep labelled examples. Settings show key-load success/failure inside the dialog. Loading a key is not verification of provider entitlement.
 
-### ไฟล์จริงในแอป Mac
+## Collaborative creation
 
-`WorkspacePanel` → `use-workspace-files` → service → `window.meStudioFiles` → preload → owned-main-frame IPC → `WorkspaceFiles`
+User intent and references govern direction. Expertise helps explain choices and execute well; it must not impose a fixed cast, duration, style or universal approval sequence. Slash commands are optional discovery shortcuts. Skills are bundled creative capabilities with project-specific enable/disable preferences. Working HTML/JSON are internal unless requested. Current attachment viewing is not AI vision.
 
-Native picker กำหนด root และ service ออก opaque IDs; renderer ส่ง path ตรงเพื่ออ่านไฟล์ไม่ได้ Media ใช้ studio-file protocol บน session ของหน้าต่าง รองรับ range/HEAD สำหรับ seek ห้ามเปลี่ยนเป็น readFile ทั้งวิดีโอหรือเปิด file:// แบบกว้าง HTML/SVG/Python เป็น escaped text การเปิดโฟลเดอร์ไม่ได้ grant ให้ AI รันโค้ด
+## Native creative configuration (2026-11-03)
 
-### Harness และความจำ
+AppConfig in Electron owns a fixed userData/config.env path and returns safe model metadata. Narrow IPC opens/reloads the config or toggles a model; production revalidates an enabled configured selection before passing provider/model/key privately to Python. Default workspace uses an app-owned output directory. The active production tool set excludes the legacy fixed-scene compiler and exposes declarative HTML/CSS/SVG previews, optional contextual choices, voice and rendering. Model-authored HTML never runs in the privileged app DOM; the host rejects active content and adds its own seek code for CSS animations. See video-harness.md for limits and remaining attachment-analysis work.
 
-Trusted host กำหนด owner/project/session, model/transport และ approved tools → Pi harness → scoped tools/store
+## Creative config update
 
-รักษา [harness invariants](agent-harness.md): grounding/provenance, grants, context/call limits, request ID, revisions/tombstones และ cancellation Memory ไม่ใช่ credential store; forget ไม่ลบ transcript หรือทำให้โมเดล unlearn Worker local-owner policy ไม่ใช่ multi-tenant authentication
-
-## วิธีเริ่มงานตามประเภท
-
-| งาน | ขั้นตอนและการตรวจ |
-| --- | --- |
-| Frontend | อ่าน owning component/CSS/primitives; แก้ให้ถูกชั้น; รักษา draft/focus/IME; npm test/lint/build แล้ว test:ui และดูหน้าจอจริง |
-| Native Files/IPC | อ่าน desktop/AGENTS.md และ contract/service; ตรวจ forged IDs/containment/symlinks/bounds/range/HEAD/cancel; ใช้ [unit tests](../tests/workspace-files.test.mts) และ [UI tests](../tests/ui/workspace-files.spec.ts); desktop:build แล้วลอง picker/play/seek จริง |
-| Provider/harness/memory | แยก metadata/transport/live integration; ตรวจ primary docs และ host policy; ใช้ synthetic fixtures/offline streams; relevant tests + agent:demo เมื่อเปลี่ยน harness; test:api เมื่อเปลี่ยน config/API |
-| Renderer | local:doctor, relevant tests และจริง render/probe เมื่อเปลี่ยน renderer; อ้างอิง local-development.md ไม่ claim ว่ามี arbitrary-code sandbox |
-| Markdown-only | ตรวจ path/link/import, ชื่อ npm script, consistency และ git diff --check; ไม่ต้อง rebuild/repackage หรือปิดแอปผู้ใช้ |
-
-คำสั่งเต็มอยู่ใน AGENTS.md/package.json บน Mac นี้ใช้ `PLAYWRIGHT_CHANNEL=chrome npm run test:ui` ได้ อย่าเทียบ mock bridge กับ native verification หรือ metadata/scripted test กับ paid generation ดู empty/error states และรายงาน visual/native checks ที่ทำไม่ได้
-
-## การใช้กับเครื่องมือ AI
-
-- เริ่มจาก application root เพื่อให้ Git/npm ถูกต้อง ถ้าเริ่ม parent ให้ตาม workspace AGENTS.md มายังแอป
-- CLAUDE.md import `@AGENTS.md`; GEMINI.md import `@./AGENTS.md`; Copilot มี .github/copilot-instructions.md ชี้กติกากลาง อ่าน nested rules ตามพื้นที่ที่เปลี่ยนด้วย
-- การสร้างไฟล์ไม่พิสูจน์ว่าทุกเครื่องมือโหลด context แล้ว หลังเปิด session ใหม่ ขอให้ AI สรุป entry route, ส่วน mock/real, คำสั่งตรวจ และไฟล์กติกาที่อ่าน ตรวจคำตอบกับเอกสารนี้ ถ้าไม่โหลดให้ระบุไฟล์ให้อ่านตรง ๆ ก่อนเริ่มงาน
-- งานเอกสารนี้ไม่ติดตั้ง/ล็อกอิน/แก้ global settings ของ coding tools และไม่แก้ memory ส่วนตัวนอก repository
-
-โครงสร้าง wrapper อ้างอิงเอกสารทางการ ตรวจ 2026-11-03: [Claude Code imports](https://code.claude.com/docs/en/memory), [Gemini CLI context/imports](https://geminicli.com/docs/cli/gemini-md/), [GitHub Copilot repository instructions](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions) การรองรับอาจต่างตามเวอร์ชัน/IDE จึงต้องตรวจ loaded context จริง
-
-## Video harness update
-
-Native video mode now connects through the AI-provider Settings button and local credential-file picker. See [video-harness.md](video-harness.md), which supersedes the earlier sample-only descriptions for explicitly connected native sessions. New backend tools are under src/server/video; unconfigured web/native sample mode is preserved.
+For current native behavior, [video-harness.md](video-harness.md) supersedes the fixed-Luna/fixed-Canvas descriptions above. Model identity is configured and travels to Python. Slash commands, real HTML/CSS preview images, contextual choices and draft versions are available; no universal creative workflow is imposed. AppConfig owns native userData/config.env and safe visibility metadata. Legacy web provider forms and attachment viewing remain distinct from live native capabilities.

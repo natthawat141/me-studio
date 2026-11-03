@@ -1,5 +1,11 @@
-@import url("https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
+@font-face {
+  font-family: Anuphan;
+  src: url('/fonts/Anuphan-variable.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: swap;
+}
 :root {
   --ink: #24272d;
   --muted: #818994;

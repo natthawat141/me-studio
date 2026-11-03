@@ -28,7 +28,7 @@ test('project groups chats and restores them after reload, with missing-folder r
   await expect(page.getByRole('log')).toContainText('คลิปแรก');
   await page.reload();
   await page.evaluate(() => sessionStorage.setItem('missing','1'));
-  await page.getByRole('button',{name:'ช่องของฉัน',exact:true}).click();
+  await page.getByRole('button',{name:'เปิดแชต คลิปแรก',exact:true}).click();
   await expect(page.getByRole('log')).toContainText('คลิปแรก');
   await expect(page.getByRole('alert').filter({hasText:'อาจถูกย้าย'})).toBeVisible();
   await page.getByRole('button',{name:'เลือกโฟลเดอร์ใหม่'}).click();
@@ -47,11 +47,17 @@ test('project chat actions keep conversations scoped and deletion is confirmed',
   await page.getByRole('button',{name:'แชตใหม่ใน ช่อง A'}).click();
   const input=page.getByRole('textbox',{name:'ข้อความถึงผู้ช่วย'});
   await input.fill('เรื่องของ A');
-  await expect(page.getByRole('button',{name:'เปิดแชต เรื่องของ A'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'เปิดแชต เรื่องของ A'})).toHaveCount(0);
+  await page.getByRole('button',{name:'ส่งข้อความ',exact:true}).click();
+  await expect(page.getByRole('button',{name:'ส่งข้อความ',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'แชตใหม่ใน ช่อง B'}).click();
   await input.fill('เรื่องของ B');
+  await page.getByRole('button',{name:'ส่งข้อความ',exact:true}).click();
+  await expect(page.getByRole('button',{name:'ส่งข้อความ',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'แชตใหม่',exact:true}).click();
   await input.fill('เรื่องที่สองของ B');
+  await page.getByRole('button',{name:'ส่งข้อความ',exact:true}).click();
+  await expect(page.getByRole('button',{name:'ส่งข้อความ',exact:true})).toBeVisible();
   await expect(page.getByRole('button',{name:'เปิดแชต เรื่องของ A'})).toBeVisible();
   await page.getByRole('button',{name:'เมนูแชต เรื่องของ B'}).click();
   await page.getByRole('menuitem',{name:'ลบแชต'}).click();

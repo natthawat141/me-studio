@@ -7,6 +7,13 @@ const text=new Set(['.txt','.md','.json','.html','.css','.js','.ts','.tsx','.py'
 function kind(path){const ext=extname(path).toLowerCase();return media[ext]?.[0]??(text.has(ext)?'text':'unsupported');}
 export class WorkspaceFiles {
   #root; #entries=new Map(); #paths=new Map();
+  // Host-only capability for an explicitly selected or generated single file.
+  async grantFile(path,root){
+    this.#root=await realpath(root);
+    const resolved=await realpath(path),rel=relative(this.#root,resolved);
+    if(rel==='..'||rel.startsWith('../')||isAbsolute(rel))throw Error('FILE_OUTSIDE_FOLDER');
+    return this.preview(this.#add(resolved,false).id);
+  }
   #add(path,directory){
     const existing=this.#paths.get(path); if(existing)return this.#entries.get(existing).entry;
     if(this.#entries.size>=10_000)throw new Error('FOLDER_LIMIT');

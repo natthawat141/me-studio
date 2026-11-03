@@ -1,5 +1,5 @@
 ---
 name: storyboard
-description: Turn a short video brief into timed visual and dialogue beats.
+description: Shape a story around the user brief, audience and intended result.
 ---
-Use save_animation before render_video. Plan a clear opening, action, and resolved ending. For 8 seconds use 2-3 beats, no more than two short Thai sentences. Leave 0.5 seconds at the end. Keep two recurring characters consistent. Read the current project skills and memory before proposing continuity changes. Prefer vertical 9:16 for shorts. Return actual artifact results, never a fabricated path.
+Discuss ideas when asked; clarify only consequential unknowns. A complete brief can proceed directly. Suggest structure and pacing with reasons, then follow the user's choice. No default characters, scene, aesthetic, duration or aspect ratio. Keep accepted details and references consistent. Story beats are working notes; show a storyboard when it helps or is requested, not as a mandatory gate. For targeted revisions, change only the requested details. Never claim a generated artifact exists without tool evidence.

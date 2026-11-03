@@ -38,5 +38,5 @@ export function useWorkspaceFiles() {
     try{const listing=await workspaceFiles().listFolder({id:root.directory.id});setRoot(listing);setFolders({[listing.directory.id]:listing});setExpanded({});}
     catch(error){setError(fileError(error));}finally{setPending(false);}
   }
-  return {root,folders,expanded,selected,pending,error,choose,activate,clear,toggle,openFile,refresh,closeFile:()=>{generation.current++;setSelected(undefined);setPending(false);}};
+  return {root,folders,expanded,selected,pending,error,choose,activate,clear,toggle,openFile,refresh,present:(file:WorkspacePreview)=>{generation.current++;setSelected(file);setPending(false);setError('');},closeFile:()=>{generation.current++;setSelected(undefined);setPending(false);}};
 }

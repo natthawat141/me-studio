@@ -1,6 +1,6 @@
 # me studio
 
-Thai-first cartoon studio. The current priority is a local-first hackathon prototype, with hosted SaaS a later direction. The studio UI remains a local frontend prototype with a read-only backend foundation. A separate local CLI now renders reviewed HTML and timed audio to real MP4. Chat is still mocked; it does not generate videos or spend provider credits.
+Thai-first cartoon studio. The current priority is a local-first hackathon prototype, with hosted SaaS a later direction. The native desktop supports explicitly connected Project video chat through a Python agent runtime and trusted local HTML/voice/render tools. Unconfigured sample chat remains separate. See [video harness](docs/video-harness.md) and [Python runtime](docs/python-agent-runtime.md) for setup and limits.
 
 ## Instructions for coding AI
 
@@ -34,13 +34,13 @@ For your own reviewed animation: `npm run local:render -- --project /absolute/pa
 
 ## Agent harness and local memory
 
-An internal harness now reuses pinned Pi agent-core/pi-ai 1.4.0 with a scoped SQLite store for user/project facts, transcripts and runs. It supports tool events, host-approved memory read/write/forget, revisions, request idempotency, bounded context/calls and cooperative cancellation. It is not connected to the studio chat or a live provider. Browser data remains unchanged.
+The active native video harness uses a Python loop with a trusted Node bridge and a scoped SQLite store for user/project facts, transcripts and runs. It supports tool events, host-approved memory read/write/forget, revisions, request idempotency, bounded context/calls and cooperative cancellation. It is connected to explicitly configured native Project chat. Browser data remains unchanged; the older Pi implementation remains for the legacy Meta path.
 
 Run `npm run agent:demo` to exercise the real Pi loop and SQLite against an explicitly scripted offline provider: remember a character, close/reopen storage, recall in a new session, verify project isolation. No AI inference/key/paid request. Node 22 SQLite emits an expected ExperimentalWarning. See [interfaces and limitations](docs/agent-harness.md), [ADR 0005](docs/decisions/0005-agent-harness-memory.md), [plan](docs/plans/2026-11-02-agent-harness-memory.md) and [third-party notices](THIRD_PARTY_NOTICES.md).
 
 ## Providers and models
 
-The configuration registry supports OpenRouter, OpenAI, Meta Model API and ElevenLabs. Meta is not limited to Llama: Muse has direct Meta API routes. See [provider standby research](docs/model-research-2026-11-03.md) and the [earlier model research](docs/model-research-2026-11-01.md). Inference remains mocked in the current desktop frontend.
+The configuration registry supports OpenRouter, OpenAI, Meta Model API and ElevenLabs. Meta is not limited to Llama: Muse has direct Meta API routes. See [provider standby research](docs/model-research-2026-11-03.md) and the [earlier model research](docs/model-research-2026-11-01.md). Unconfigured chat remains a sample; explicitly configured native video sessions use OpenAI through Python.
 
 `.env.local` accepts:
 - `STUDIO_MODE`: demo (default), self-hosted or saas. This describes intent; saas does not enable account/auth/billing services.
@@ -52,7 +52,7 @@ The configuration registry supports OpenRouter, OpenAI, Meta Model API and Eleve
 - `STUDIO_SPEECH_MODELS`: same shape using real ElevenLabs model IDs. Check language/TTS capabilities with the provider.
 - `STUDIO_SPEECH_VOICE_ID` / `STUDIO_SPEECH_VOICE_LABEL`: separate voice identity metadata. Standby uses `eleven_v3` for Thai and the official example voice `JBFqnCBsd6RMkjVDRZzb`; ElevenLabs metadata currently returns 401, so it is not verified as usable with the configured key.
 
-Requested Meta standby route is `muse-spark-1.3-contributor`. Meta may use submitted content to train models under Contributor mode; only metadata was requested during setup. OpenAI/Meta model metadata checks returned 200, which does not prove paid inference/billing readiness. No generation call was made. The packaged desktop sample UI does not automatically load this developer env file; native credential integration is still pending.
+Requested Meta standby route is `muse-spark-1.3-contributor`. Meta may use submitted content to train models under Contributor mode; only metadata was requested during setup. OpenAI/Meta model metadata checks returned 200, which does not prove paid inference/billing readiness. No generation call was made. The packaged desktop sample UI does not automatically load this developer env file; credentials are loaded explicitly through the native file picker and kept in worker memory.
 
 Lists default to empty. Use actual IDs from [OpenRouter models](https://openrouter.ai/docs/api/api-reference/models/list-all-models-and-their-properties) and [ElevenLabs models](https://elevenlabs.io/docs/api-reference/models/list); the app does not invent model versions or probe providers in this release. Restart the server after env changes. Configured key presence is not a verified connection. No real key is needed for the current demo.
 
@@ -68,7 +68,7 @@ To add an operator-approved model: add its ID/label to STUDIO_CHAT_MODELS, resta
 | --- | --- |
 | Projects, messages, imported files | Local browser storage; no cloud accounts/sync |
 | Chat | Validated structured request to mock adapter, selected model and asset IDs included |
-| Internal agent/memory | Pi loop + SQLite facts/transcripts/runs, verified with offline scripted transport; no studio/live integration |
+| Native agent/memory | Python loop + trusted Node tools and SQLite facts/transcripts/runs; explicit native connection; Python verified offline |
 | Drafts | Separate per project during the current studio session; not durable across reload/navigation |
 | Workspace writes | Revision check rejects stale snapshots; not atomic cross-process storage |
 | Existing videos | Real playback/download on the desktop right panel; imported or bundled examples |
@@ -100,11 +100,11 @@ CI repeats these checks. It does not replace browser UX checks, security review 
 
 ## Code map
 
-The current desktop V1 is an Electron Mac arm64 app with a chat-first frontend at `/desktop`: Home, chat/drafts/history/search, Prompt Kit composer/file picker, multi-provider metadata settings, and an artifact preview opened by clicking a labelled sample. It does not call AI or render from this screen. API-key entry remains disabled; old browser/native project data is preserved separately. See the [current frontend plan and evidence](docs/plans/2026-11-03-chat-first-frontend.md). The earlier [hackathon plan](docs/plans/2026-11-03-desktop-hackathon.md) contains superseded UI work; additional harness development is paused.
+The current desktop V1 is an Electron Mac arm64 app with a chat-first frontend at `/desktop`: Home, chat/drafts/history/search, Prompt Kit composer/file picker, multi-provider metadata settings, and an artifact preview opened by clicking a labelled sample. Configured native Project sessions can render through the Python agent; other provider forms remain metadata. old browser/native project data is preserved separately. See the [current frontend plan and evidence](docs/plans/2026-11-03-chat-first-frontend.md). The earlier [hackathon plan](docs/plans/2026-11-03-desktop-hackathon.md) contains superseded UI work; the active video loop is now Python; older frontend-only descriptions are historical.
 
 Cmd/Ctrl+K opens the command-search palette. It groups quick actions, recent chats, existing sample artifact files and message-text matches, with bottom category filters and arrow/Enter navigation. File results open the existing preview; text results return to the matching message. See [search refinement](docs/plans/2026-11-03-command-search.md).
 
-Build locally with `npm run desktop:build`. Open `release/mac-arm64/me studio.app`. It is an unsigned development app, not a signed/notarized release. The packaged runtime bundles Node, Chromium and FFmpeg; the dormant native runtime is separate from the frontend sample adapter. For browser review use `http://localhost:3100/desktop`.
+Build locally with `npm run desktop:build`. Open `release/mac-arm64/me studio.app`. It is an unsigned development app, not a signed/notarized release. Run `npm run agent:python-setup` on the build machine first. The packaged runtime bundles Python, Node, Chromium and FFmpeg; configured native production and the unconfigured sample adapter remain separate. For browser review use `http://localhost:3100/desktop`.
 
 `src/app`: thin route entrypoints, root layout/global styles and HTTP handlers. `src/components` groups screens and their components by feature:
 
@@ -146,3 +146,7 @@ After `npm run build`, install a test browser with `npx playwright install chrom
 The composer gear replaces the paperclip button and opens settings in the right workspace, even without a video. Plus still imports files; the full library remains in primary navigation. Confirmation preference, project chat override and output aspect ratios/counts save separately per project and persist on refresh. Legacy projects get defaults. Closing restores a previously visible video without resetting playback position. Mobile settings are full-screen with keyboard focus containment. Image/video generation models are not selectable until integrated; these preferences do not authorize credits or generate media.
 
 The recommended backend stack and first authorization policy slice are documented in [ADR 0003](docs/decisions/0003-backend-stack.md). The policy is tested in isolation and is not connected to real sessions, a database, or protected endpoints yet.
+
+## Active Python agent
+
+`npm run agent:python-setup` prepares pinned development dependencies. `npm run agent:python-test` tests the SDK transport offline; `npm run agent:python-demo` exercises the Python loop and real HTML-to-MP4 tools with a scripted model. End users of the packaged Mac app need no Python installation. [Runtime ownership, packaging and verification](docs/python-agent-runtime.md). Node still owns persistence, permissions and production tools.

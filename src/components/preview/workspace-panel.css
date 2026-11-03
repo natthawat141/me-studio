@@ -1,12 +1,11 @@
 .workspace-panel {container:workspace/inline-size;display:flex;flex-direction:column;height:100%;min-width:0;background:#fff;color:#45474d;font-size:12px;}
-.workspace-panel.is-expanded {position:fixed;inset:0;z-index:24;}
+.workspace-panel.is-expanded {position:fixed;inset:48px 0 0;z-index:24;height:auto;}
 .workspace-header {height:46px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 9px 0 15px;border-bottom:1px solid #e9eaed;}
 .workspace-breadcrumb {display:flex;align-items:center;gap:7px;flex:1;min-width:0;color:#9197a0;font-size:11px;}
-.workspace-breadcrumb>span {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.workspace-breadcrumb>span {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .workspace-breadcrumb>svg {flex-shrink:0;}
 .workspace-breadcrumb>span:first-of-type {max-width:110px;}
-.workspace-current-file {color:#626a76;}
-.workspace-breadcrumb .workspace-close-file {height:23px;width:23px;}
+.workspace-current-file {flex:1;color:#626a76;}
 .workspace-header-actions {display:flex;align-items:center;gap:1px;margin-left:auto;flex-shrink:0;}
 .workspace-header-actions .chat-icon {height:28px;width:28px;}
 .workspace-header-actions .is-active {background:#eef0f2;color:#4b5563;}

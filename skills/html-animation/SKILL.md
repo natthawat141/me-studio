@@ -1,5 +1,5 @@
 ---
 name: html-animation
-description: Produce deterministic Canvas cartoons through the trusted scene compiler.
+description: Create original motion design with declarative HTML, CSS and inline SVG.
 ---
-Use save_animation to supply JSON; the host compiles this to self-contained HTML exposing window.seek(milliseconds). Do not write or run arbitrary JavaScript, shell or Python. Scene style supports city-night, day-park, office; two characters, colored shirts, timed dialogue, wave/walk/idle, captions and ending title. Animation must be a pure function of time: seeded scenery, easing, walk cycle, squash/stretch, blink and mouth motion. All typography/assets must be local. Align dialogue cues with voice length before export.
+Use save_html_animation to author a design suited to the brief. Compose typography, shapes, layouts, gradients and inline SVG freely. Use CSS @keyframes for deterministic motion; the host pauses and seeks animations to render each frame. No model JavaScript, scripts, event handlers, remote URLs, imports or external fonts. Do not fall back to a fixed cartoon template. A draft screenshot is a visual direction, not a completed MP4. Compare distinct drafts when useful; remember the chosen version and use read_current_animation(version) before targeted edits. Respect documented renderer size/duration limits and return only actual tool outputs.

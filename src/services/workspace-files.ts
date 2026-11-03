@@ -1,9 +1,11 @@
-import type { WorkspaceFilesBridge } from '@/lib/workspace-files';
+import type { WorkspaceFilesBridge,ChatFileRef } from '@/lib/workspace-files';
 
 export function workspaceFiles(): WorkspaceFilesBridge {
   if(typeof window==='undefined'||!window.meStudioFiles)throw new Error('DESKTOP_APP_REQUIRED');
   return window.meStudioFiles;
 }
+export async function resolveChatFile(file:ChatFileRef){const bridge=workspaceFiles();if(!bridge.chatFile)throw Error('DESKTOP_APP_REQUIRED');return bridge.chatFile({id:file.id,projectId:file.projectId});}
+export async function resolveVideoArtifact(id:string,projectId:string){const bridge=workspaceFiles();if(!bridge.videoArtifact)throw Error('DESKTOP_APP_REQUIRED');return bridge.videoArtifact({id,projectId});}
 export function fileError(error: unknown): string {
   const message=error instanceof Error?error.message:'';
   if(message.includes('DESKTOP_APP_REQUIRED'))return 'เปิดแอป me studio บน Mac เพื่อเลือกโฟลเดอร์ในเครื่อง';

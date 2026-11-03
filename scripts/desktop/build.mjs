@@ -15,6 +15,8 @@ await build({ entryPoints: ['desktop/main.mjs'], outfile: 'dist-desktop/main.mjs
 await copyFile('desktop/preload.cjs', 'dist-desktop/preload.cjs');
 await build({ entryPoints: ['desktop/worker.mts'], outfile: join(runtime, 'desktop/worker.mjs'), bundle: true, platform: 'node', format: 'esm', target: 'node22', external: ['playwright-core'], banner: { js: "import { createRequire as __studioCreateRequire } from 'node:module'; const require = __studioCreateRequire(import.meta.url);" } });
 await copyFile('desktop/ui-server.mjs', join(runtime, 'desktop/ui-server.mjs'));
+// A staged build must not retain route-cache entries from a previous Next build.
+await rm(join(runtime, 'app/.next'), {recursive:true,force:true});
 await cp('.next/standalone', join(runtime, 'app'), { recursive: true, filter: path => !basename(path).startsWith('.env') });
 await cp('public', join(runtime, 'app/public'), { recursive: true });
 await cp('.next/static', join(runtime, 'app/.next/static'), { recursive: true });
@@ -58,5 +60,5 @@ for (const packagePath of ['@ffmpeg-installer/darwin-arm64', '@ffprobe-installer
     catch (error) { if (error.code !== 'ENOENT') throw error; }
   }
 }
-await writeFile(join(runtime, 'runtime.json'), JSON.stringify({ node: nodeVersion, nodeArchiveSha256: digest, browser: basename(dirname(browserRoot)), target: 'darwin-arm64', builtAt: new Date().toISOString() }, null, 2));
+await writeFile(join(runtime, 'runtime.json'), JSON.stringify({ agent: 'python', agentProtocol: 1, node: nodeVersion, nodeArchiveSha256: digest, browser: basename(dirname(browserRoot)), target: 'darwin-arm64', builtAt: new Date().toISOString() }, null, 2));
 console.log(`Desktop resources staged: ${runtime}`);

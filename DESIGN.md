@@ -1,37 +1,66 @@
-# me studio — interface standard
+# me studio — product contract
 
-## Direction
-White content #FFFFFF, quiet navigation #F9FAFB, ink #24272D, secondary text #657180, lines #E5E7EB, action blue #0074E8. Anuphan with system fallback. Thai-first; factual labels only, no decorative eyebrows/kickers.
+## Outcome
+Thai-first AI cartoon studio: a user supplies a brief, reviews a storyboard and estimate, approves generation, then watches and revises a versioned video. Users do not install agent skills themselves.
 
-## Hierarchy
-- Desktop V1 (`/desktop`) opens on a quiet Home with centered brand/composer. Sidebar owns แชตใหม่, search, folder Projects, history and Settings. A Project groups chats with a user-selected local folder; no manual scene form is required. First send becomes a conversation with the composer below. The right artifact preview is opt-in on artifact click, never opened automatically by a reply. Use regular/light typography and thin controls. Prompt Kit owns textarea/attachment interactions; shadcn Base UI owns dialogs/menus/switches.
-- Project creation asks for a name and an explicit source-folder selection in the same dialog. Show the selected folder and permit changing it before a separate Create action; cancellation of the native picker preserves the selection. Use the existing accessible dialog primitive and the light desktop theme.
-- One window-wide top navigation owns sidebar collapse, new chat, current conversation title, selected-file tab and Files panel access. Keep native traffic-light clearance; avoid separate competing window strips above chat/sidebar/file content. On desktop a collapsed history sidebar becomes a narrow functional icon rail; on phones hide the rail and retain top navigation controls. Do not add inactive back/forward or pretend file tabs.
-- Desktop Settings has category navigation and one detail view at a time. Separate provider configuration from the model picker. Never imply that saved model metadata is authenticated provider access. Prototype API-key fields are disabled.
-- Desktop controls, including portalled dialogs, use a neutral gray keyboard-focus outline (#858B95) and neutral hover backgrounds. Keep a visible keyboard focus indicator; brand/status blue does not apply to hover/focus outlines.
-- Desktop search is a wide command palette: top search input, compact grouped action/chat/file/text results, soft highlighted selection, bottom category filters. Cmd/Ctrl+K opens it; arrows/Enter navigate, Escape closes and restores focus. Groups and filters describe real available data; do not add inactive folder/Pages/Space controls.
-- Search follows the user's light Codex reference: translucent off-white #FAFAFB, grayscale frosted backdrop inside the panel, a clear dimmed page outside it, diffuse low-contrast shadow, regular system typography and thin 1.25px monochrome line icons. Selected rows/filter pills use a faint neutral gray; no colored pictorial icons or blue hover/focus. Keyboard guidance stays in the accessible description rather than extra footer text.
-- The legacy browser studio retains Studio, Projects, Library and Settings until a separate migration is approved; its project-specific rules below do not apply to `/desktop`.
-- One page heading. Project title and video filename have different roles; do not put them into two competing navigation bars.
-- Use whitespace, typography and alignment before borders. One enclosing surface per logical group. Do not nest bordered cards solely for layout.
-- Library: thumbnail and metadata form one clickable item. The thumbnail is the visual anchor; filenames stay readable. Secondary actions use a menu or appear on hover AND keyboard focus/touch access. No hover-only essential actions.
-- Inputs retain clear boundaries; selected navigation uses a subtle background. Return links are not bordered primary buttons.
-- Right video area: preserve aspect ratio, contain full portrait video, resize with pointer and keyboard, allow close/reopen. Playback/fullscreen belongs to the player. Downloads must distinguish existing files from new render/export.
-- Desktop Files opens explicitly from the top-right panel button. Native folder selection reveals a read-only expandable tree with name filter/refresh; selecting media opens its preview beside the tree, keeping chat on the left. A single breadcrumb/toolbar row contains folder/refresh/expand/close controls; its separate file-tree toggle hides only the far-right tree without remounting the player or losing playback position. Use regular small text and monochrome line icons. Narrow panels switch between the tree and preview; phones use the existing full-screen right-panel layout. Closing the panel preserves the chosen folder/selection for the current app session and restores button focus.
+Current priority (2026-11-03): a chat-first Mac desktop frontend for hackathon validation. Home → conversation → click a labelled artifact → optional right preview. Folder Projects group chats and a user-selected local directory; no manual scene form is required. Familiar chat layout, white content, light translucent sidebar and Prompt Kit composer; see [current frontend plan](docs/plans/2026-11-03-chat-first-frontend.md). Native video chat now uses a Python agent loop; see docs/python-agent-runtime.md. Hosted SaaS criteria below remain future targets.
 
-## Interaction requirements
-Every core control has a useful next step. Disconnected services explain the actual setup needed. Never provide a nonfunctional “Connect” button. Prefer contextual voice selection near narration/characters; provider credentials belong to owner/admin settings.
-Preserve drafts by conversation; navigation must not silently discard work. Distinguish loading, empty, failure and disconnected states. Surface save failures and conflicts without overwriting original data.
-Keyboard focus visible; accessible labels; dialogs restore focus; layouts checked at 390px, 768px and 1440px. Main task must remain reachable when a mobile sidebar is open.
+The `/desktop` screen preserves unconfigured sample chat separately from explicitly connected native Project sessions. Settings allow a local credential file to connect OpenAI and optional ElevenLabs; other provider forms remain metadata. Draft/history/preferences use the separate `me-studio.chat-ui.v1` key. Native attachments retain actual bytes through scoped local file IDs. Existing browser/native projects are preserved; the legacy `/` studio remains separate.
 
-## Component/CSS ownership
-Reuse installed Base UI/shadcn primitives. New feature styles belong with a named feature scope; avoid appending conflicting selectors or !important overrides. Refactor the owning rule. Existing global CSS is migration debt, not an example to copy.
-Visual acceptance requires inspecting actual screenshots of changed states; lint/build alone do not verify UX.
+The active video harness is Python plus a trusted Node bridge and scoped SQLite foundation. Pi remains only for the separate legacy Meta path. This is not a public service or general code-execution agent. See docs/python-agent-runtime.md and docs/agent-harness.md.
 
-## Legacy project routes
+## Canonical workflow
+Brief → script/storyboard revision → voice/output settings → server quote → explicit approval → queued/running job → video artifact → revision/new version.
+- Project groups conversations, assets, storyboards and generations. It is not a single video.
+- Conversation has messages; each generation captures an immutable input/model/storyboard version.
+- User-uploaded media, bundled examples and generated output have distinct provenance.
+- Quotes expire; approval authorizes one quote/version. A changed brief needs a new quote. The server owns reservations, debits and refunds; retry never double-charges.
+- Provider means the service receiving the request; model means its model ID. Meta Model API is a distinct provider for Muse models; Llama is a model family. Configuration supports Meta directly and OpenRouter, with provider-specific IDs. See docs/model-research-2026-11-01.md; direct inference is not implemented.
+- Voice identity, speech model and chat model are separate settings. Provider catalogs and language support are discovered/validated; never invent model versions.
 
-These rules apply to the legacy project studio, not desktop V1. Project names edit inline on click, Enter saves, Escape cancels, blur saves nonempty edits; empty blur restores the original. Keep the editor in the same layout position. Use dialogs for multi-step or consequential decisions, not a single name field.
+## Preview decision
+Desktop sidebar interaction update (2026-11-03): Project headers are disclosure controls, not conversation navigation. The write action starts/resumes a Project draft, persisted separately from sent threads. Empty folders display “ไม่มีแชต”; only sending creates a history row. Legacy unsent threads migrate to drafts without changing their IDs/text or removing data. Search can recover saved drafts. Browsing/collapsing folders preserves the active transcript and player; disclosure state and sidebar scroll persist. All desktop chats are grouped, with existing general chats shown in Default workspace without rewriting native scope or moving files. The fixed shell/composer stays mounted while only the new transcript fades in; switching restores its scroll position. Open artifact panels remain until explicitly closed. Directory Projects are still required for connected video production.
 
-Composer gear opens project Agent settings in the right workspace (replacing paperclip action). Plus remains file import. Settings use grouped controls/spacing and a scrollable body with an always-reachable close/done action. On phones use a full-screen panel, contain focus and restore it to the gear on close. Video stays mounted/paused behind settings, retaining playback position.
+For `/desktop`, the right preview starts closed; an explicit artifact click or the Files button opens it. Sample artifacts remain labelled examples. The native Mac app lets users choose a local folder, browse/filter its files and play existing video/audio or preview images/text beside chat. Folder Projects retain their identity and associated chats across app restarts; users can select a new folder if the original moves. HTML/Python are read-only source text; arbitrary HTML execution remains unavailable; supported native generation uses a trusted compiler. The ordinary web prototype requires the desktop bridge for folder Projects. AI configuration lives in the category-based Settings dialog. Existing-file previews and generated native artifacts share the local player.
 
-Project settings: the project menu opens a compact directory dialog with the selected source root and output folder. Source is the read-only Files scope; output is persisted configuration for future generation. Use thin neutral separators and small hover actions in both themes.
+Legacy `/` retains the project Agent settings gear and project video panel; these older controls are not the accepted desktop V1 UX. Do not execute generated HTML in the application DOM. HTML preview and MP4 rendering have independent acceptance criteria.
+
+## Deployment modes
+- SaaS: service-owned provider keys; authenticated tenants, server-side permissions, per-user budgets and usage ledger. Users select operator-approved models.
+- Self-hosted: same domain/API; operator supplies environment secrets and permitted model IDs. Future authenticated owner UI can manage encrypted credentials. Editing preferences is not connecting a provider.
+- Demo: no provider requests or real billing; examples labelled, cancellation and local persistence still work.
+
+## Current status
+Implemented: chat-first desktop, folder Projects, persisted attachments, inline media/native file preview, explicitly connected Python video harness with scoped SQLite memory and Project skills, HTML-to-MP4/voice/trim tools and versioned local output. The reviewed-input CLI remains available. No tenant auth, hosted application database, credit accounting, durable queue or arbitrary generated-code sandbox. Native Python orchestration is verified offline; account entitlement/live inference after migration is a separate check. See docs/video-harness.md for supported scene limits.
+
+## MVP release criteria
+A new account can create an owned project, obtain a reviewed storyboard/quote, approve exactly once, receive a real video, revise it without losing earlier versions, and recover from failed/cancelled jobs. Ownership must hold across every project/file/job endpoint. Self-host setup must work from documented env examples. See docs/ACCEPTANCE.md.
+
+## Project Agent settings
+Optional validated settings on each Project: confirmation policy (always or paid-only), chat-model override, image/video aspect ratios and output counts. Legacy projects use safe defaults without forced migration. Controls save on change; failures do not replace the prior settings. Chat requests include a settings snapshot. Paid-only means free work can skip an extra confirmation; it does not authorize charging and does not bypass server quotes/approvals. Image/video model selection remains unavailable until actual service capabilities are integrated.
+
+Desktop Project directory settings persist the chosen source and output directories through native pickers. Source controls the current read-only Files tree. Configured native generation writes immutable versions under the selected output directory; unconfigured sample chat does not write there.
+
+## Video harness V1 (current; supersedes early frontend-only scope above)
+
+Desktop is a conversational creative agent with optional directory Projects. Local config.env selects OpenAI/OpenRouter models and ElevenLabs voice settings; model visibility is editable in Settings. Python can discuss a brief, present clickable choices, author original HTML/CSS/SVG animation, share real previews, restore per-chat versions and render MP4. Native unconfigured sends preserve the draft and request configuration. Browser-only previews remain labelled samples. See [video harness](docs/video-harness.md) for exact capability and verification boundaries.
+
+The active model/tool loop is Python. Node still owns tools, memory, scopes and rendering; the app bundles the Python runtime. This is not a complete Python backend rewrite. Native media/file previews and persisted attachments are available. Live Pi evidence predates this migration; Python offline render checks do not prove live provider access.
+
+Native agent-capable chat refreshes worker credential status before every text send. Cached UI state never selects sample mode. Disconnected, unavailable, wrong-provider or missing-Project states retain the draft and explain the required setup. Native attachment viewing remains separate; browser/read-only previews keep labelled examples. Settings show key-load success/failure inside the dialog. Loading a key is not verification of provider entitlement.
+
+## Collaborative creation
+
+User intent and references govern direction. Expertise helps explain choices and execute well; it must not impose a fixed cast, duration, style or universal approval sequence. Slash commands are optional discovery shortcuts. Skills are bundled creative capabilities with project-specific enable/disable preferences. Working HTML/JSON are internal unless requested. Current attachment viewing is not AI vision.
+
+## Native creative configuration (2026-11-03)
+
+AppConfig in Electron owns a fixed userData/config.env path and returns safe model metadata. Narrow IPC opens/reloads the config or toggles a model; production revalidates an enabled configured selection before passing provider/model/key privately to Python. Default workspace uses an app-owned output directory. The active production tool set excludes the legacy fixed-scene compiler and exposes declarative HTML/CSS/SVG previews, optional contextual choices, voice and rendering. Model-authored HTML never runs in the privileged app DOM; the host rejects active content and adds its own seek code for CSS animations. See video-harness.md for limits and remaining attachment-analysis work.
+
+## Creative config update
+
+For current native behavior, [video-harness.md](video-harness.md) supersedes the fixed-Luna/fixed-Canvas descriptions above. Model identity is configured and travels to Python. Slash commands, real HTML/CSS preview images, contextual choices and draft versions are available; no universal creative workflow is imposed. AppConfig owns native userData/config.env and safe visibility metadata. Legacy web provider forms and attachment viewing remain distinct from live native capabilities.
+
+## Creative controls
+
+Native Settings → AI providers uses a searchable model-management list, grouped by provider with visibility switches. Provider credentials live in config.env; never display them in the model list. Menus use subdued gray hairlines rather than global white border tokens. Contextual choices are light buttons in the conversation; a slash menu sits above the composer without sending on selection. No decorative headings, fixed option count or required approval wizard.

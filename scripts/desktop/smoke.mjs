@@ -25,6 +25,9 @@ worker.on('exit', code => { for (const entry of pending.values()) entry.reject(n
 const request = (method, input) => new Promise((resolve, reject) => { const requestId = randomUUID(); pending.set(requestId, { resolve, reject }); worker.send({ requestId, method, input }); });
 const timer = setTimeout(() => { completed.reject(new Error('PACKAGED_RENDER_TIMEOUT')); worker.kill('SIGKILL'); }, 180_000);
 try {
+  const agent = await request('videoStatus', {});
+  if (agent.runtime !== 'python' || agent.configured) throw new Error('PYTHON_AGENT_STATUS_MISMATCH');
+  if (execFileSync(join(resources, 'python-agent/me-studio-agent'), ['--check'], {encoding:'utf8',env:runtimeEnvironment()}).trim() !== 'me-studio-agent python sdk-ready protocol=1') throw new Error('FROZEN_PYTHON_SDK_FAILED');
   const project = await request('create', { title: 'Desktop runtime smoke' });
   const updated = await request('update', { projectId: project.id, revision: 0, changes: { greeting: 'สวัสดีจาก me studio', reply: 'สร้างในแอปได้แล้ว' } });
   const preview = await request('preview', { projectId: project.id, revision: updated.revision });

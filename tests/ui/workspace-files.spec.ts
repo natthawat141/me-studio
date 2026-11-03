@@ -45,18 +45,18 @@ test('selected-folder tree opens media beside chat and preserves draft and folde
   await panel.getByRole('button', { name: 'แสดงรายการไฟล์', exact: true }).click();
   await expect(page.getByRole('treeitem', { name: 'scene.html', exact: true })).toBeVisible();
   await expect(input).toHaveValue('ข้อความที่ยังไม่ได้ส่ง');
-  await panel.getByRole('button', { name: 'ปิดแผงไฟล์', exact: true }).click();
+  await page.getByRole('button', { name: 'ซ่อนแผงไฟล์', exact: true }).click();
   await expect(page.getByRole('button', { name: 'เปิดแผงไฟล์', exact: true })).toBeFocused();
   await page.getByRole('button', { name: 'เปิดแผงไฟล์', exact: true }).click();
   await expect(panel.locator('video')).toHaveJSProperty('readyState', 4);
-  await panel.getByRole('button', { name: 'ปิดไฟล์ greeting.mp4', exact: true }).click();
+  await nav.getByRole('button', { name: 'ปิดแท็บ greeting.mp4', exact: true }).click();
   await page.getByRole('treeitem', { name: 'scene.html', exact: true }).click();
   await expect(panel.locator('pre')).toContainText('<script>window.untrustedSourceRan');
   expect(await page.evaluate(() => 'untrustedSourceRan' in window)).toBe(false);
-  await panel.getByRole('button', { name: 'ปิดไฟล์ scene.html', exact: true }).click();
+  await nav.getByRole('button', { name: 'ปิดแท็บ scene.html', exact: true }).click();
   await panel.getByRole('textbox', { name: 'กรองไฟล์ในรายการ' }).fill('missing-file');
   await expect(page.getByRole('treeitem', { name: 'scene.html', exact: true })).toHaveCount(0);
-  await panel.getByRole('button', { name: 'ปิดแผงไฟล์', exact: true }).click();
+  await page.getByRole('button', { name: 'ซ่อนแผงไฟล์', exact: true }).click();
   await input.fill('ทำคลิปตัวอย่าง');
   await page.getByRole('button', { name: 'ส่งข้อความ', exact: true }).click();
   await expect(page.getByRole('button', { name: 'ดูวิดีโอตัวอย่าง', exact: true })).toBeVisible();
@@ -80,7 +80,9 @@ test('global navigation controls the history sidebar and compact rail without lo
   await expect(input).toHaveValue('ร่างสำหรับทดสอบ navigation');
   await nav.getByRole('button', { name: 'เริ่มแชตใหม่', exact: true }).click();
   await expect(input).toHaveValue('');
-  await page.getByRole('button', { name: 'เปิดแชต ร่างสำหรับทดสอบ navigation', exact: true }).click();
+  await page.getByRole('button', { name: 'ค้นหาแชต ⌘ K' }).click();
+  await page.getByRole('combobox', { name: 'ค้นหาในประวัติแชต' }).fill('ร่างสำหรับทดสอบ navigation');
+  await page.getByRole('option', { name: 'ร่างสำหรับทดสอบ navigation', exact: true }).click();
   await expect(input).toHaveValue('ร่างสำหรับทดสอบ navigation');
 });
 
@@ -100,7 +102,7 @@ test('narrow files panel switches between tree and video without overflow', asyn
   await panel.getByRole('button', { name: 'กลับไปดูไฟล์', exact: true }).click();
   await expect(panel.locator('video')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await panel.getByRole('button', { name: 'ปิดแผงไฟล์', exact: true }).click();
+  await page.getByRole('button', { name: 'ซ่อนแผงไฟล์', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'ข้อความถึงผู้ช่วย' })).toBeVisible();
 });
 
@@ -110,4 +112,24 @@ test('ordinary web preview explains that local-folder access needs the desktop a
   await page.getByRole('button', { name: 'เลือกโฟลเดอร์', exact: true }).click();
   await expect(page.getByRole('region', { name: 'ไฟล์และพรีวิว', exact: true }).getByRole('alert')).toContainText('แอป');
   await expect(page.getByRole('tree')).toHaveCount(0);
+});
+
+test('expanded file panel preserves the global title bar and keeps filename separate from controls',async({page})=>{
+ await installFiles(page);await page.goto('/desktop');
+ await page.getByRole('button',{name:'เปิดแผงไฟล์',exact:true}).click();
+ const panel=page.getByRole('region',{name:'ไฟล์และพรีวิว',exact:true});
+ await panel.getByRole('button',{name:'เลือกโฟลเดอร์',exact:true}).click();
+ await page.getByRole('treeitem',{name:'scenes',exact:true}).click();await page.getByRole('treeitem',{name:'greeting.mp4',exact:true}).click();
+ await panel.getByRole('button',{name:'ขยายแผงไฟล์',exact:true}).click();
+ for(const width of [1440,980,390]){
+  await page.setViewportSize({width,height:900});
+  const nav=await page.getByRole('navigation',{name:'แถบนำทางหลัก'}).boundingBox();
+  const header=await panel.locator('.workspace-header').boundingBox();
+  expect(header!.y).toBeGreaterThanOrEqual(nav!.y+nav!.height);
+  const name=await panel.locator('.workspace-breadcrumb').boundingBox(),actions=await panel.locator('.workspace-header-actions').boundingBox();
+  expect(name!.x+name!.width).toBeLessThanOrEqual(actions!.x);
+  expect(await panel.locator('.workspace-breadcrumb').evaluate(el=>{const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));})).toBe(true);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+ }
+ await page.screenshot({path:'.studio/frontend-review/expanded-file-responsive.png'});
 });

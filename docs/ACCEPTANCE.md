@@ -14,13 +14,19 @@ A checked item means verified in the described scope, not inferred from file exi
 - [ ] Home opens on brand/composer; no Project creation/manual scene form or automatic preview.
 - [ ] แชตใหม่/history/search/settings preserve per-chat drafts; IME Enter, keyboard navigation and focus return work.
 - [ ] White/light surfaces, thin monochrome icons and neutral hover/focus match DESIGN.md, including portalled dialogs.
-- [ ] Sample replies/artifacts and name-only attachments are identified honestly; provider metadata is not claimed as authentication.
+- [ ] Sample/generated media provenance is preserved; native attachment bytes use scoped IDs; provider metadata is not claimed as authentication.
 - [ ] Files opens explicitly; native folder picker cancel preserves the prior folder. Tree expansion/filter/refresh work with actual selected files.
 - [ ] Real MP4 plays/seeks through the packaged native protocol. Audio/image/text previews work; HTML/Python/SVG source is escaped and not executed.
 - [ ] Forged IDs, root escapes/symlinks and oversized text fail safely; media range/HEAD and root-grant revocation are covered.
 - [ ] Panel close/reopen preserves chat draft/folder state; narrow layout can switch tree/preview without overflow. Native grants end on app exit.
 - [ ] Browser-only access explains the native picker requirement; mock bridge tests are distinguished from real native checks.
 - [ ] Native build uses the changed main/preload/runtime, excludes env files/credentials and preserves user data.
+
+## Python runtime regressions
+- [ ] Python SDK/subprocess tests run offline; legacy SQLite history/revisions/request replay remain readable.
+- [ ] Host grants and model/tool/context/time limits remain enforced; cancellation stops the child and releases the session.
+- [ ] Packaged Python passes --check with environment allowlist; no dependency on the user installing Python.
+- [ ] Live provider inference is reported separately from SDK mocks and scripted rendering.
 
 ## Legacy foundation regressions
 - [ ] Stale workspace snapshot is rejected, original saved changes preserved; corrupt data is not overwritten.

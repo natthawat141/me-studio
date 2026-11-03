@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { StudioMemoryStore } from '../../src/server/memory/store';
-import { createStudioHarness } from '../../src/server/agent/runtime.mjs';
+import { createStudioHarness } from '../../src/server/agent/pi-runtime.mjs';
 import { call, offlineModel, reply, scriptedStream } from './offline-provider.mjs';
 
 // Own demo directory on every run: never overwrites application/user memory.

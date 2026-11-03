@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createAssistantMessageEventStream } from '@earendil-works/pi-ai';
 import { StudioMemoryStore } from '../src/server/memory/store';
-import { createStudioHarness } from '../src/server/agent/runtime.mjs';
+import { createStudioHarness } from '../src/server/agent/pi-runtime.mjs';
 import { call, offlineModel, reply, scriptedStream } from '../scripts/local/offline-provider.mjs';
 
 const session = { ownerId: 'alice', projectId: 'series-a', sessionId: 'chat-a' };

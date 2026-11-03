@@ -19,9 +19,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Product and actual boundaries
 - me studio helps nontechnical users create videos through conversation without installing agent skills. Current priority is the chat-first Mac desktop experience at `/desktop`.
-- Unconfigured desktop chat remains a labelled sample. Native video mode is explicitly connected via a local credential-file picker: OpenAI/Pi → structured Canvas scene → ElevenLabs → verified MP4, with Project skills and scoped memory. See docs/video-harness.md for supported operations and limits; other provider forms are metadata only.
+- Browser/read-only previews retain labelled samples. Native agent-capable chat checks the worker before sending; disconnected/error states preserve drafts and must never silently return sample replies. Native operation reads private userData/config.env, with an in-app provider-key form and model visibility controls. Python can discuss briefs, propose contextual choices, author declarative HTML/CSS/SVG previews and render MP4 with configured voice, Project skills and scoped memory. See docs/video-harness.md for supported operations and limits; Legacy web provider forms remain separate metadata-only UI.
 - Native Files is real: chosen local folder → read-only tree/filter → media/text preview beside chat. Ordinary browser preview explains the desktop requirement. HTML/Python/SVG show source text and are not executed.
-- An internal Pi harness + scoped SQLite memory, dormant native worker/Meta adapter and reviewed-input CLI renderer exist separately. Their existence is not an end-to-end prompt-to-video flow. Backend language remains open, including Python; do not rewrite it without task scope.
+- The active video agent loop is Python, connected through a trusted Node JSONL bridge. Node retains SQLite, grants and production tools; the older Pi/Meta path remains separate. See docs/python-agent-runtime.md before runtime changes; do not treat Python as permission for arbitrary code execution.
 - Legacy `/`, `/projects`, `/library`, `/settings` retain project UX/data. Do not migrate, remove or impose that UX on `/desktop` as incidental cleanup.
 - No deployed SaaS auth, tenant application database, credit ledger or durable generation queue. See PRODUCT.md for future requirements.
 
@@ -35,8 +35,9 @@ Node >=22.19.0, npm/lockfile, Next.js App Router, React, strict TypeScript, Tail
 | `src/components/{chat,settings,preview,layout}/` | Feature UI; installed primitives remain in ui and prompt-kit |
 | `src/hooks/`, `src/services/`, `src/lib/` | UI state, boundary adapters and shared contracts |
 | `desktop/` | Main process, preload, local runtime/worker and Files service |
-| `src/server/{agent,memory}/` | Internal Pi runtime and scoped SQLite persistence |
+| `src/server/{agent,memory}/` | Trusted Python bridge, retained legacy Pi path and scoped SQLite persistence |
 | `src/server/config.ts`, `src/lib/provider-config.ts` | Server env boundary and safe provider metadata projection |
+| `python/` | Active Python model/tool loop and pinned SDK/build dependencies |
 | `scripts/local/`, `scripts/desktop/` | Reviewed-input rendering and native packaging |
 | `tests/`, `tests/ui/` | Unit/API and isolated browser regressions |
 
@@ -50,7 +51,7 @@ Run from this directory; use package.json as authority if scripts change.
 | UI changes | After build, `npm run test:ui`; inspect changed states/screenshots, keyboard and relevant viewport widths |
 | API/config | `npm run test:api`; synthetic credentials only |
 | Native main/preload/runtime or packaged UI | `npm run desktop:build`; reopen `release/mac-arm64/me studio.app` and test the actual native flow |
-| Harness/memory | Relevant tests plus `npm run agent:demo` (scripted offline provider) |
+| Harness/memory | `npm run agent:python-setup` once; relevant tests, `npm run agent:python-test`, `npm run agent:python-demo` and legacy `npm run agent:demo` (all offline) |
 | Rendering | `npm run local:doctor`; relevant renderer tests; actual render/probe only when the renderer changes |
 | Markdown-only | Check referenced paths, npm scripts, instruction imports and `git diff --check`; no app rebuild required |
 
@@ -58,7 +59,7 @@ UI tests use isolated browser data and a dedicated local server. On this Mac `PL
 
 ## Accepted desktop UX
 - White/light main area, translucent Mac sidebar, regular/light typography, thin monochrome Lucide icons. Reuse installed components before creating a primitive. Brand/status color does not authorize blue hover/focus outlines; desktop controls use neutral gray.
-- Home first: centered brand/composer; **แชตใหม่**, history/search, folder Projects and Settings. A Project groups chats and a user-selected local directory; no manual dialogue/scene/color form. AI will own creation; the current prototype must remain labelled honestly.
+- Home first: brand in the empty content stage and a stable bottom composer; **แชตใหม่**, search, grouped Projects (including Default workspace) and Settings. Directory Projects add a user-selected local folder; no manual dialogue/scene/color form. Preserve the fixed navigation shell when switching chats; see DESIGN.md. AI will own creation; unconfigured sample replies must remain labelled honestly.
 - Keep chat on the left. Open the right panel on explicit artifact/Files action; support resize/close/reopen. Keep drafts and selected folder state when closing a panel. Folder grants end on app exit.
 - Search follows the accepted light command-palette pattern with grouped results and category filters. Preserve IME-safe Enter, arrows, Escape and focus return.
 - No decorative eyebrow/kicker/slogan above headings/cards, emoji-style UI icons, heavy nested cards or gratuitous borders. Edit the owning CSS instead of accumulating overrides or !important.

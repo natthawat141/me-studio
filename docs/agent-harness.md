@@ -2,9 +2,9 @@
 
 ## สถานะ
 
-มีแกน harness ภายในแล้ว ใช้ Pi agent-core 1.4.0 กับ memory บนดิสก์จริง ทดสอบด้วย scripted provider เพื่อไม่เสียค่า API มี Meta provider adapter และ native worker implementation แยกอยู่แล้ว แต่ยังไม่ได้ต่อกับแชต `/desktop` ปัจจุบัน และไม่ได้ยืนยัน live inference จากหน้านี้ ยังไม่มี HTTP chat endpoint, memory UI หรือ agent ที่สร้างวิดีโอครบจาก prompt แชตยังตอบแบบ mock และ catalog ยังระบุ liveChatEnabled=false ตามจริง ดู [คู่มือสำหรับ coding AI](ai-guide.md) เพื่อแยก implementation ภายในออกจากความสามารถที่เปิดในผลิตภัณฑ์
+Native video mode ใช้ Python async agent loop และ OpenAI Python SDK ผ่าน trusted Node bridge แล้ว Node ยังคงดูแล SQLite, scope, grants และ production tools ดู [Python runtime](python-agent-runtime.md) กับ [video harness](video-harness.md) สำหรับ flow ที่เชื่อมจริง Pi เดิมอยู่ที่ pi-runtime.mts สำหรับ legacy Meta path เท่านั้น ยังไม่มี public HTTP chat endpoint หรือ SaaS authorization
 
-## ทดลอง
+## ทดลอง Pi เดิม (offline)
 
 ต้องใช้ Node.js >=22.19.0 และ development dependencies จาก npm install/npm ci ตามปกติ:
 
@@ -13,6 +13,8 @@ npm run agent:demo
 ```
 
 demo ใช้ loop/tool execution ของ Pi จริง แต่คำตอบเขียนไว้ล่วงหน้า ไม่มี HTTP, API key หรือ inference: เรียกเครื่องมือจำตัวละคร Milo → ปิดแล้วเปิด database connection → เปิด session ใหม่และตรวจ context → ตรวจว่าโปรเจกต์อื่นไม่ได้รับข้อมูลนี้ เก็บ database แยกใหม่ทุกครั้งใน `.studio/agent-demo/<uuid>/memory.sqlite` ไม่เขียนทับ memory ผู้ใช้ โค้ด scripted provider ไม่ถูก import ใน application runtime
+
+สำหรับ Python ใช้ `npm run agent:python-setup`, `npm run agent:python-test` และ `npm run agent:python-demo` ตัว demo ใหม่ใช้ Python loop และ render MP4 จริงโดยไม่เรียก API
 
 ## ส่วนที่นำมาใช้
 
@@ -50,8 +52,8 @@ Native Files panel ที่เปิดโฟลเดอร์/เล่นว
 const harness = createStudioHarness({
   store,
   session: trustedSessionScope,
-  model: operatorApprovedModel,
-  stream: approvedProviderStream,
+  apiKey: hostResolvedOpenAIKey,
+  python: hostResolvedPythonWorker,
 });
 const result = await harness.run({
   requestId, text: userMessage,
@@ -60,18 +62,18 @@ const result = await harness.run({
 });
 ```
 
-ตัวแปรข้างต้นเป็น interface สำหรับ backend ที่จะเชื่อม ไม่ใช่ config ที่เปิด live inference ได้แล้ว session/model/stream/grants ต้องมาจาก trusted policy ห้าม map owner/model/base URL/grants ตรงจาก HTTP body Repository scoping ไม่ใช่ authentication และยังไม่มี protected local API
+ตัวแปรข้างต้นต้องมาจาก trusted host โดย native integration อยู่ใน src/server/video/native-production.mts session/credentials/executable/grants ต้องมาจาก trusted policy ห้าม map owner/model/base URL/grants ตรงจาก HTTP body Repository scoping ไม่ใช่ authentication และยังไม่มี protected local API
 
 ## Limits และ persistence
 
 - Defaults: 6 model calls, 12 requested tool calls, input 8,000 characters, context 32,000 serialized characters, output cap 2,048 tokens/call และ cooperative timeout 120 วินาที
 - Tool batch ที่เกิน budget ไม่ถูกรัน toolCalls นับคำขอจากโมเดล ไม่ใช่จำนวน side effects สำเร็จ Context bound เป็น characters ไม่ใช่ token estimator/ราคาเงินจริง Token counters อาศัย provider stream; fixture ไม่ใช่ billed usage
-- Sequential tools และ stream options ปิด SDK automatic retry; live adapters ต้องยืนยันพฤติกรรมจริง
+- Sequential tools และ OpenAI Python SDK ปิด automatic retry; live account access ต้องยืนยันแยก
 - Request ID/input/model เดิมที่ completed คืนผลเดิม Input เปลี่ยนแต่ใช้ ID เดิม conflict งาน failed/cancelled ต้องตั้งใจเริ่มด้วย request ID ใหม่
 - Active run หนึ่งงานต่อ session เก็บ transcript เมื่อ message จบ พร้อม terminal status/result/error code ส่งออกเฉพาะ text delta และ status/tool metadata ที่จำเป็น ไม่ส่ง raw Pi/provider error objects เป็น public DTO
 
-Cancellation/timeout เป็น cooperative: provider/tools ต้องเคารพ AbortSignal ไม่ใช่ hard sandbox Process ถูก kill/เครื่องดับอาจเหลือ running; ยังไม่มี crash recovery/lease takeover/resume side effects สำเร็จแล้วเปิด session/process ใหม่คุยต่อได้ งานไม่ completed จะไม่ถูก replay เข้า model context อัตโนมัติ
+Cancellation/timeout ยุติ Python subprocess และส่ง AbortSignal ให้ host tools ที่ยังต้อง cooperate ไม่ใช่ hard sandbox Process ถูก kill/เครื่องดับอาจเหลือ running; ยังไม่มี crash recovery/lease takeover/resume side effects สำเร็จแล้วเปิด session/process ใหม่คุยต่อได้ งานไม่ completed จะไม่ถูก replay เข้า model context อัตโนมัติ
 
 Node built-in node:sqlite แสดง ExperimentalWarning บน Node 22.22.3 ที่ตรวจ ไม่มี npm native SQLite binding เพิ่ม Database file ใช้ mode 0600 และ directory ใหม่ private เท่าที่ OS รองรับ ไม่เข้ารหัส database และไม่รับรอง Windows ACL Database มี application/schema marker ไม่ initialize ทับ SQLite ของแอปอื่นหรือไฟล์อ่านไม่ได้ ไม่มีการย้าย localStorage/IndexedDB เดิมอัตโนมัติ
 
-ตรวจด้วย npm test, npm run lint, npm run build และ npm run agent:demo ยังไม่ได้ทดสอบ clean-machine/Linux/Windows/SaaS
+ตรวจด้วย npm test, npm run agent:python-test, npm run agent:python-demo, npm run lint, npm run build และ npm run agent:demo ยังไม่ได้ทดสอบ clean-machine/Linux/Windows/SaaS

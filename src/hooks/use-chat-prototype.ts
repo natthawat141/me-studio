@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { chatPrototypeKey, emptyThread, initialChatState, prototypeSchema, sampleReply, type ChatProvider, type ChatPrototypeState } from '@/lib/chat-prototype';
+import type {NativeSelection} from '@/lib/native-models';
+import type { ChatFileRef } from '@/lib/workspace-files';
+import { commitChatMessage, createChatDraft, restoreChatDrafts } from '@/lib/chat-drafts';
 
 export function useChatPrototype() {
   const [state, setState] = useState<ChatPrototypeState>(initialChatState);
@@ -16,13 +19,15 @@ export function useChatPrototype() {
       try {
         const raw = localStorage.getItem(chatPrototypeKey);
         if (raw) {
-          const saved = prototypeSchema.parse(JSON.parse(raw));
+          const saved = restoreChatDrafts(prototypeSchema.parse(JSON.parse(raw)));
           if (window.matchMedia('(max-width: 800px)').matches) saved.preferences.sidebarOpen = false;
-          const empty = saved.threads.find(t => !t.messages.length && !t.draft);
-          if (empty) { setState(saved); setActiveId(empty.id); }
-          else { const fresh = emptyThread(crypto.randomUUID()); setState({ ...saved, threads: [fresh, ...saved.threads] }); setActiveId(fresh.id); }
-        } else if (window.matchMedia('(max-width: 800px)').matches) {
-          setState(s => ({ ...s, preferences: { ...s.preferences, sidebarOpen: false } }));
+          const draft = saved.drafts.find(t => !t.projectId) ?? createChatDraft();
+          setState({ ...saved, drafts: saved.drafts.includes(draft) ? saved.drafts : [draft, ...saved.drafts] });
+          setActiveId(draft.id);
+        } else {
+          const fresh = createChatDraft();
+          setState(s => ({ ...s, drafts: [fresh], preferences: { ...s.preferences, sidebarOpen: !window.matchMedia('(max-width: 800px)').matches } }));
+          setActiveId(fresh.id);
         }
         setReady(true);
       } catch { setStorageError('อ่านประวัติแชตไม่สำเร็จ ข้อมูลเดิมจะไม่ถูกเขียนทับ'); }
@@ -31,23 +36,29 @@ export function useChatPrototype() {
   }, []);
   useEffect(() => {
     if (!ready || storageError) return;
-    try { localStorage.setItem(chatPrototypeKey, JSON.stringify(state)); }
-    catch { queueMicrotask(() => setStorageError('บันทึกประวัติไม่สำเร็จ โปรดตรวจสอบพื้นที่จัดเก็บ')); }
+    const timer = setTimeout(() => {
+      try { localStorage.setItem(chatPrototypeKey, JSON.stringify(state)); }
+      catch { setStorageError('บันทึกประวัติไม่สำเร็จ โปรดตรวจสอบพื้นที่จัดเก็บ'); }
+    }, 180);
+    const flush = () => { try { localStorage.setItem(chatPrototypeKey, JSON.stringify(state)); } catch { /* Preserve the last successfully saved snapshot. */ } };
+    window.addEventListener('pagehide', flush);
+    return () => { clearTimeout(timer); window.removeEventListener('pagehide', flush); };
   }, [state, ready, storageError]);
-  const active = state.threads.find(t => t.id === activeId) ?? state.threads[0];
-  function newChat(projectId?: string) {
-    const fresh = { ...emptyThread(crypto.randomUUID()), ...(projectId ? {projectId} : {}) };
-    setState(s => ({ ...s, threads: [fresh, ...s.threads] }));
+  const active = [...state.threads, ...state.drafts].find(t => t.id === activeId) ?? state.drafts[0] ?? state.threads[0] ?? emptyThread('new');
+  function newChat(projectId?: string, resume = false) {
+    const fresh = (resume ? state.drafts.find(t => t.projectId === projectId && t.draft) ?? state.drafts.find(t => t.projectId === projectId) : undefined) ?? createChatDraft(projectId);
+    if (!state.drafts.includes(fresh)) setState(s => ({ ...s, drafts: [fresh, ...s.drafts] }));
     setActiveId(fresh.id);
   }
   function draft(value: string) {
-    setState(s => ({ ...s, threads: s.threads.map(t => t.id === active.id ? { ...t, draft: value.slice(0, 8000), ...(!t.messages.length ? { title: value.trim().slice(0, 42) || 'แชตใหม่' } : {}) } : t) }));
+    const update = (t: typeof active) => t.id === active.id ? { ...t, draft: value.slice(0, 8000), ...(!t.messages.length ? { title: value.trim().slice(0, 42) || 'แชตใหม่' } : {}) } : t;
+    setState(s => ({ ...s, threads: s.threads.map(update), drafts: s.drafts.map(update) }));
   }
-  function send(attachments: string[]) {
+  function send(attachments: string[],files:ChatFileRef[]=[]) {
     if (!ready || pendingId || (!active.draft.trim() && !attachments.length)) return false;
     const id = active.id, text = active.draft.trim();
-    const message = { id: crypto.randomUUID(), role: 'user' as const, text, attachments };
-    setState(s => ({ ...s, threads: s.threads.map(t => t.id === id ? { ...t, draft: '', title: t.messages.length ? t.title : text.slice(0, 42) || 'ไฟล์แนบ', updatedAt: Date.now(), messages: [...t.messages, message] } : t) }));
+    const message = { id: crypto.randomUUID(), role: 'user' as const, text, attachments:files.length?[]:attachments,...(files.length?{files}:{}) };
+    setState(s => commitChatMessage(s, active, message));
     setPendingId(id);
     timer.current = setTimeout(() => {
       const reply = sampleReply();
@@ -56,13 +67,18 @@ export function useChatPrototype() {
     }, 650);
     return true;
   }
-  function sendProduction(projectId:string) {
-    if(!ready||pendingId||!active.draft.trim()||!window.meStudioFiles?.produceVideo)return false;
-    const id=active.id,text=active.draft.trim(),requestId=crypto.randomUUID();nativeRequest.current=requestId;setPendingId(id);
-    setState(s=>({...s,threads:s.threads.map(t=>t.id===id?{...t,draft:'',title:t.messages.length?t.title:text.slice(0,42),messages:[...t.messages,{id:crypto.randomUUID(),role:'user',text}],updatedAt:Date.now()}:t)}));
-    void window.meStudioFiles.produceVideo({projectId,sessionId:id,requestId,text}).then(result=>{
-      setState(s=>({...s,threads:s.threads.map(t=>t.id===id?{...t,messages:[...t.messages,{id:crypto.randomUUID(),role:'assistant',text:result.text.replace(/\[[^\]]+\]\([^)]*\)/g,''),...(result.artifact?{artifacts:[{id:result.artifact.id,title:result.artifact.title,kind:'video' as const,src:result.artifact.url,poster:'' as const,nativeProjectId:projectId}]}:{})}]}:t)}));
+  function sendProduction(projectId?:string,files:ChatFileRef[]=[],selection?:NativeSelection,textOverride?:string) {
+    if(!ready||pendingId||!(textOverride??active.draft).trim()||!window.meStudioFiles?.produceVideo)return false;
+    const id=active.id,text=(textOverride??active.draft).trim(),requestId=crypto.randomUUID();nativeRequest.current=requestId;setPendingId(id);
+    setState(s=>{const next=commitChatMessage(s,active,{id:crypto.randomUUID(),role:'user',text,...(files.length?{files}:{})});return textOverride?{...next,threads:next.threads.map(t=>t.id===id?{...t,draft:active.draft}:t)}:next;});
+    void window.meStudioFiles.produceVideo({projectId,sessionId:id,requestId,text,...selection}).then(result=>{
+      setState(s=>({...s,threads:s.threads.map(t=>t.id===id?{...t,messages:[...t.messages,{id:crypto.randomUUID(),role:'assistant',text:result.text.replace(/\[[^\]]+\]\([^)]*\)/g,'').slice(0,8000),...(result.files?.length?{files:result.files}:{}),...(result.choices?{choices:result.choices}:{}),...(result.artifact?{artifacts:[{id:result.artifact.id,title:result.artifact.title,kind:'video' as const,src:result.artifact.url,poster:'' as const,nativeProjectId:result.projectId??projectId,files:result.artifact.files}]}:{})}]}:t)}));
     }).catch(()=>setState(s=>({...s,threads:s.threads.map(t=>t.id===id?{...t,messages:[...t.messages,{id:crypto.randomUUID(),role:'assistant',text:'สร้างงานไม่สำเร็จ หรือถูกหยุด กรุณาตรวจการเชื่อมต่อ AI และลองใหม่'}]}:t)}))).finally(()=>{if(nativeRequest.current===requestId)setPendingId(undefined);});return true;
+  }
+  function attach(files:ChatFileRef[]){
+    if(!ready||pendingId||!files.length)return false;
+    const text=active.draft.trim();
+    setState(s=>commitChatMessage(s,active,{id:crypto.randomUUID(),role:'user',text,files}));return true;
   }
   function stop() { if(pendingId)void window.meStudioFiles?.cancelVideo?.(); if (timer.current) clearTimeout(timer.current); timer.current = null; setPendingId(undefined); }
   function rename(id: string, title: string) {
@@ -73,17 +89,22 @@ export function useChatPrototype() {
     if (!ready || storageError) return;
     const target=state.threads.find(t=>t.id===id); if(!target)return;
     if(pendingId===id)stop();
-    let remaining=state.threads.filter(t=>t.id!==id);
-    if(activeId===id&&!remaining.some(t=>t.projectId===target.projectId))remaining=[{...emptyThread(crypto.randomUUID()),...(target.projectId?{projectId:target.projectId}:{})},...remaining];
-    if(!remaining.length)remaining=[emptyThread(crypto.randomUUID())];
-    if(activeId===id){const next=remaining.find(t=>t.projectId===target.projectId)??remaining[0];setActiveId(next.id);}
-    setState(s=>({...s,threads:remaining}));
+    const remaining=state.threads.filter(t=>t.id!==id);
+    const next=remaining.find(t=>t.projectId===target.projectId)??state.drafts.find(t=>t.projectId===target.projectId)??createChatDraft(target.projectId);
+    if(activeId===id)setActiveId(next.id);
+    setState(s=>({...s,threads:s.threads.filter(t=>t.id!==id),drafts:activeId===id&&!remaining.includes(next)&&!s.drafts.includes(next)?[next,...s.drafts]:s.drafts}));
   }
   function provider(value: ChatProvider) {
     setState(s => ({ ...s, providers: s.providers.map(p => p.id === value.id ? value : p) }));
   }
+  function toggleProject(id: string) {
+    setState(s => ({ ...s, preferences: { ...s.preferences, collapsedProjects: { ...s.preferences.collapsedProjects, [id]: !s.preferences.collapsedProjects[id] } } }));
+  }
+  function revealProject(id: string) {
+    setState(s => s.preferences.collapsedProjects[id] ? { ...s, preferences: { ...s.preferences, collapsedProjects: { ...s.preferences.collapsedProjects, [id]: false } } } : s);
+  }
   return {
-    state, active, activeId, sendProduction, setActiveId, newChat, draft, send, stop, pendingId, ready, storageError, rename, deleteChat, provider,
+    state, active, activeId, sendProduction, attach, setActiveId, newChat, draft, send, stop, pendingId, ready, storageError, rename, deleteChat, provider, toggleProject, revealProject,
     selectProvider: (id: string) => setState(s => ({ ...s, selectedProvider: id })),
     preferences: (patch: Partial<ChatPrototypeState['preferences']>) => setState(s => ({ ...s, preferences: { ...s.preferences, ...patch } })),
   };

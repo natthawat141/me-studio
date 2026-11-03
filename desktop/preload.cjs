@@ -15,12 +15,18 @@ const fileRequest = (method,input) => ipcRenderer.invoke('studio:files',method,i
 });
 contextBridge.exposeInMainWorld('meStudioFiles',Object.freeze({
   chooseFolder:()=>fileRequest('choose'),
+  configCatalog:()=>fileRequest('configCatalog'),
+  openConfig:()=>fileRequest('configOpen'),
+  saveProvider:input=>fileRequest('configProvider',input),
+  toggleModel:input=>fileRequest('configToggle',input),
   videoStatus:()=>fileRequest('videoStatus'),
   loadVideoKeys:()=>fileRequest('videoKeys'),
   produceVideo:input=>fileRequest('videoProduce',input),
   cancelVideo:()=>fileRequest('videoCancel'),
   saveVideo:input=>fileRequest('videoSave',input),
   videoArtifact:input=>fileRequest('videoArtifact',input),
+  storeChatFile:input=>fileRequest('storeChatFile',input),
+  chatFile:input=>fileRequest('chatFile',input),
   projects:()=>fileRequest('projects'),
   pickProjectFolder:()=>fileRequest('pickProjectFolder'),
   createProject:input=>fileRequest('createProject',input),

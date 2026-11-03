@@ -8,7 +8,7 @@ import { DesktopProjects } from './projects.mjs';
 import { renderProject } from '../scripts/local/render.mjs';
 import { loadProject, startAssetServer } from '../scripts/local/project.mjs';
 import { StudioMemoryStore } from '../src/server/memory/store';
-import { createStudioHarness } from '../src/server/agent/runtime.mjs';
+import { createStudioHarness } from '../src/server/agent/pi-runtime.mjs';
 import { createMetaProvider, META_MODELS } from '../src/server/agent/meta-provider.mjs';
 import type { AgentTool } from '@earendil-works/pi-agent-core';
 

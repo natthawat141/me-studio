@@ -19,11 +19,15 @@
     "test": "tsx --test tests/*.test.ts tests/*.test.mts",
     "test:api": "tsx tests/http.integration.ts",
     "test:ui": "playwright test",
-    "desktop:stage": "npm run build && node scripts/desktop/build.mjs",
+    "desktop:stage": "npm run build && npm run agent:python-build && node scripts/desktop/build.mjs",
     "desktop:dev": "electron dist-desktop/main.mjs",
     "desktop:build": "npm run desktop:stage && electron-builder --config desktop/electron-builder.yml --mac dir --arm64",
     "desktop:smoke": "node scripts/desktop/smoke.mjs",
-    "video:produce": "tsx scripts/local/produce-video.mts"
+    "video:produce": "tsx scripts/local/produce-video.mts",
+    "agent:python-setup": "python3 -m venv .studio/python-env && .studio/python-env/bin/python -m pip install -r python/requirements.lock",
+    "agent:python-test": ".studio/python-env/bin/python -m unittest discover -s python/tests -v",
+    "agent:python-demo": "tsx scripts/local/python-agent-demo.mts",
+    "agent:python-build": "node scripts/desktop/build-python.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
