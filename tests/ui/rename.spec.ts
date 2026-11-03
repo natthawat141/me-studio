@@ -10,7 +10,7 @@ test('studio rename stays inline: Enter saves, Escape cancels, blur saves and bl
   await page.screenshot({path:testInfo.outputPath('inline-desktop.png')});
   await input.press('Enter');
   await expect(page.getByRole('button',{name:'เปลี่ยนชื่อ เรื่องใหม่ของฉัน',exact:true})).toBeFocused();
-  await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('me-studio.workspace.v1')!).projects.find((p:{id:string})=>p.id==='start').title)).toBe('เรื่องใหม่ของฉัน');
+  await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('me-studio.workspace.v1') ?? 'null')?.projects.find((p:{id:string})=>p.id==='start')?.title)).toBe('เรื่องใหม่ของฉัน');
   await page.getByRole('button',{name:'เปลี่ยนชื่อ เรื่องใหม่ของฉัน',exact:true}).click();
   await input.fill('อย่าบันทึก');await input.press('Escape');
   await expect(page.getByRole('button',{name:'เปลี่ยนชื่อ เรื่องใหม่ของฉัน',exact:true})).toBeVisible();

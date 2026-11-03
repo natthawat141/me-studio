@@ -1,0 +1,13 @@
+# Native desktop rules
+
+Read ../AGENTS.md and ../docs/architecture.md. These rules apply to the Electron shell/runtime; they do not authorize adding new product capabilities.
+
+- Main process owns OS dialogs, grants and IPC. Keep contextIsolation/sandbox enabled, nodeIntegration disabled and the narrow preload API. Validate sender ownership, origin and main-frame identity for every new IPC method; do not expose ipcRenderer or arbitrary command/path APIs.
+- Files access starts with the native directory picker. Renderer callers use opaque IDs issued by WorkspaceFiles; check current root containment on each read, skip hidden files/symlinks and preserve bounded lazy listings/text reads. Do not turn the read-only panel into filesystem editing or agent execution incidentally.
+- Media uses `studio-file` with streaming, byte ranges and HEAD. Register its handler on the same persistent session/partition used by BrowserWindow. Keep source HTML/SVG/Python escaped as text; do not load them in the privileged app DOM.
+- `meStudioFiles` owns Files and the explicitly connected native video flow (see docs/video-harness.md). Production methods pass host-resolved Project roots to the worker, hold keys in memory and return scoped artifact IDs/URLs. Unconfigured chat remains a sample; the older Meta scene bridge is separate.
+- Keep fixed loopback origin, environment allowlist, single-instance behavior and ready-handshake checks. Do not fix boot failures by inheriting all process.env, accepting arbitrary origins or falling back to an unowned port listener.
+- Never include developer env files/credentials in staged resources or app.asar. Runtime credentials are not loaded automatically. Preserve brand icon, userData and existing local projects/memory during packaging.
+- `npm run desktop:build` stages runtime and packages Apple Silicon output. Changes to main/preload require rebuilding the native bundle; updating only Next output leaves the old bridge running. The artifact is `release/mac-arm64/me studio.app`.
+- Stop the old app normally before replacing resources; do not cancel active jobs silently. Test picker cancel, real folder/file selection, playback/seek, close/reopen and error paths in the packaged app. Browser tests with a fake bridge do not prove native integration.
+- `npm run desktop:smoke` exercises the worker renderer with generated test data, not the accepted chat UI or live AI. Use it when worker/render behavior changes; use the Files unit/UI tests for Files changes. Record exactly which path was verified.

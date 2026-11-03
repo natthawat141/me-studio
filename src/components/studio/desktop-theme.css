@@ -1,0 +1,79 @@
+/* Desktop dialogs render in a portal, so theme styles are scoped to the document. */
+.chat-settings-dialog input:focus, .chat-settings-dialog select:focus { outline:1px solid #8c9199; outline-offset:-1px; }
+.theme-select { max-width:145px; padding:6px 8px; border:1px solid #e3e5e8; border-radius:7px; background:transparent; color:#555b65; font:inherit; }
+html[data-studio-theme="dark"] { --focus-outline:#a5a5aa; }
+html[data-studio-theme="dark"] body:has(.chat-app) { --focus-outline:#a5a5aa; }
+html[data-studio-theme="dark"] .chat-app { --chat-ink:#e7e7e8; --chat-muted:#aaaab0; --chat-line:#37373b; }
+html[data-studio-theme="dark"] .chat-main, html[data-studio-theme="dark"] .workspace-panel, html[data-studio-theme="dark"] .workspace-browser { background:#161618; color:#e1e1e3; }
+html[data-studio-theme="dark"] .desktop-navigation { background:rgba(37,40,49,.98); border-color:rgba(255,255,255,.07); }
+html[data-studio-theme="dark"] .desktop-navigation-controls, html[data-studio-theme="dark"] .chat-sidebar, html[data-studio-theme="dark"] .chat-sidebar-rail { border-color:#39393e; }
+html[data-studio-theme="dark"] .desktop-navigation-title, html[data-studio-theme="dark"] .desktop-files-button, html[data-studio-theme="dark"] .project-row { color:#c5c5ca; }
+html[data-studio-theme="dark"] .desktop-navigation-tab { background:#343438; box-shadow:0 0 0 1px #48484d; color:#ddd; }
+html[data-studio-theme="dark"] .desktop-files-button:hover, html[data-studio-theme="dark"] .desktop-files-button.is-active, html[data-studio-theme="dark"] .chat-icon:hover { background:#39393e; color:#eee; }
+html[data-studio-theme="dark"] .chat-sidebar, html[data-studio-theme="dark"] .chat-sidebar-rail { background:linear-gradient(165deg,rgba(42,47,61,.98),rgba(30,32,40,.98)); }
+html[data-studio-theme="dark"] .opaque-sidebar .chat-sidebar { background:#262a34; }
+html[data-studio-theme="dark"] .chat-app .chat-composer { background:#29292c; border-color:#424247; }
+html[data-studio-theme="dark"] .chat-app .chat-composer textarea { color:#efeff0; }
+html[data-studio-theme="dark"] .model-picker:hover, html[data-studio-theme="dark"] .history-row:hover, html[data-studio-theme="dark"] .history-row.is-active, html[data-studio-theme="dark"] .project-line:hover, html[data-studio-theme="dark"] .sidebar-actions>button:hover, html[data-studio-theme="dark"] .sidebar-settings:hover { background:rgba(255,255,255,.09); }
+html[data-studio-theme="dark"] .composer-send { background:#e4e4e5; color:#222; }
+html[data-studio-theme="dark"] .composer-send:disabled { background:#505055; color:#aaa; }
+html[data-studio-theme="dark"] .message-user, html[data-studio-theme="dark"] .composer-file, html[data-studio-theme="dark"] .history-rename, html[data-studio-theme="dark"] .chat-artifact { background:#303034; color:#e3e3e5; border-color:#444449; }
+html[data-studio-theme="dark"] .chat-menu, html[data-studio-theme="dark"] .project-hover-tooltip { background:#303034; color:#ededee; border-color:#49494e; box-shadow:0 8px 30px #0006; }
+html[data-studio-theme="dark"] .chat-menu [data-highlighted], html[data-studio-theme="dark"] .chat-menu [data-slot="dropdown-menu-item"]:focus { background:#444449; }
+html[data-studio-theme="dark"] .project-info-name, html[data-studio-theme="dark"] .project-info-detail { color:#dedee0; }
+html[data-studio-theme="dark"] .chat-settings-dialog, html[data-studio-theme="dark"] .project-dialog, html[data-studio-theme="dark"] .chat-delete-dialog { background:#222225; color:#ededee; }
+html[data-studio-theme="dark"] .settings-nav { background:#29292d; border-color:#39393d; }
+html[data-studio-theme="dark"] .settings-nav button[aria-selected="true"], html[data-studio-theme="dark"] .settings-nav button:hover { background:#3a3a3f; }
+html[data-studio-theme="dark"] .setting-row, html[data-studio-theme="dark"] .providers-list>button, html[data-studio-theme="dark"] .project-folder-choice { border-color:#ffffff10; }
+html[data-studio-theme="dark"] .providers-list>button { background:transparent; }
+html[data-studio-theme="dark"] .providers-list>button:hover, html[data-studio-theme="dark"] .provider-symbol { background:#333338; }
+html[data-studio-theme="dark"] .provider-form input, html[data-studio-theme="dark"] .project-dialog input, html[data-studio-theme="dark"] .theme-select { background:#2b2b2f; border-color:#4a4a50; color:#ededee; }
+html[data-studio-theme="dark"] .provider-form input:disabled { background:#303034; color:#99999f; }
+html[data-studio-theme="dark"] .project-dialog label { color:#c7c7ca; }
+html[data-studio-theme="dark"] .project-folder-button, html[data-studio-theme="dark"] .chat-delete-actions button, html[data-studio-theme="dark"] .chat-button { background:#38383d; border-color:#ffffff18; color:#e2e2e4; }
+html[data-studio-theme="dark"] .chat-button.primary, html[data-studio-theme="dark"] .project-dialog-actions button[type="submit"] { background:#e7e7e8; color:#222; border-color:#e7e7e8; }
+html[data-studio-theme="dark"] .chat-search-backdrop { background:rgba(0,0,0,.3); }
+html[data-studio-theme="dark"] .chat-search-dialog { background:rgba(39,39,42,.78); color:#ddd; box-shadow:0 16px 65px #0006,0 0 0 1px #ffffff1c; }
+html[data-studio-theme="dark"] .search-field, html[data-studio-theme="dark"] .search-footer { border-color:#ffffff1c; }
+html[data-studio-theme="dark"] .search-field input { color:#ededee; caret-color:#eee; }
+html[data-studio-theme="dark"] .search-result[aria-selected="true"], html[data-studio-theme="dark"] .search-footer [role="tab"][aria-selected="true"], html[data-studio-theme="dark"] .search-footer [role="tab"]:hover { background:#ffffff16; color:#eee; }
+html[data-studio-theme="dark"] .preview-container, html[data-studio-theme="dark"] .artifact-preview, html[data-studio-theme="dark"] .workspace-file-preview, html[data-studio-theme="dark"] .workspace-file-preview.file-kind-video, html[data-studio-theme="dark"] .workspace-file-preview.file-kind-text { background:#1e1e21; }
+html[data-studio-theme="dark"] .artifact-preview>header { background:#222225; border-color:#3e3e43; }
+html[data-studio-theme="dark"] .workspace-header, html[data-studio-theme="dark"] .workspace-body.has-file>.workspace-browser { border-color:#3e3e43; }
+html[data-studio-theme="dark"] .workspace-filter, html[data-studio-theme="dark"] .workspace-header-actions .is-active, html[data-studio-theme="dark"] .workspace-tree-row:hover, html[data-studio-theme="dark"] .workspace-tree-row[aria-selected="true"] { background:#353539; color:#eee; }
+html[data-studio-theme="dark"] .workspace-filter input, html[data-studio-theme="dark"] .workspace-tree-row, html[data-studio-theme="dark"] .workspace-file-preview>pre, html[data-studio-theme="dark"] .workspace-welcome h2, html[data-studio-theme="dark"] .workspace-current-file { color:#d0d0d3; }
+html[data-studio-theme="dark"] .preview-resizer { background:#3e3e43; }
+@media (prefers-reduced-transparency:reduce) { html[data-studio-theme="dark"] .chat-sidebar, html[data-studio-theme="dark"] .chat-search-dialog { background:#29292d; backdrop-filter:none; } }
+.theme-options { display:flex; gap:10px; align-items:flex-start; }
+.theme-option { position:relative; display:flex; flex-direction:column; gap:5px; align-items:center; cursor:pointer; color:#858991; font-size:11px; }
+.theme-option input { position:absolute; opacity:0; width:1px; height:1px; }
+.theme-preview { display:block; width:66px; height:50px; padding:5px; border:1px solid #dedfe2; border-radius:9px; background:#f3f3f4; }
+.theme-option input:checked + .theme-preview { outline:1px solid #757b84; outline-offset:2px; }
+.theme-option input:focus-visible + .theme-preview { outline:1px solid #656b73; outline-offset:3px; }
+.theme-preview-window { display:flex; width:100%; height:100%; overflow:hidden; border:1px solid #d8d8da; border-radius:4px; background:#fff; }
+.theme-preview-sidebar { width:14px; flex-shrink:0; background:#ededee; border-right:1px solid #dedee0; }
+.theme-preview-content { flex:1; padding:7px 5px; display:flex; flex-direction:column; gap:3px; }
+.theme-preview-content i { height:2px; width:85%; background:#d5d5d8; border-radius:2px; }
+.theme-preview-content i:nth-child(2) { width:60%; }
+.theme-preview-content b { height:3px; width:55%; background:#858b96; border-radius:2px; align-self:end; }
+.theme-preview-dark { background:#303034; border-color:#55555a; }
+.theme-preview-dark .theme-preview-window { background:#1b1b1e; border-color:#4a4a4e; }
+.theme-preview-dark .theme-preview-sidebar { background:#37373b; border-color:#4a4a4e; }
+.theme-preview-dark .theme-preview-content i { background:#6a6a70; }
+.theme-preview-system .theme-preview-window { background:linear-gradient(90deg,#fff 50%,#1b1b1e 50%); }
+html[data-studio-theme="dark"] .theme-option { color:#b7b7bd; }
+@media (max-width:500px) { .theme-setting { align-items:flex-start; flex-direction:column; } }
+
+/* Neutral, single-pixel desktop focus and menu boundaries. */
+body:has(.chat-app) :is(button,a,input,select,[role="separator"]):focus-visible { outline-width:1px; outline-color:#81858d; outline-offset:-1px; }
+.chat-settings-dialog, .project-dialog, .chat-delete-dialog, .chat-menu { --tw-ring-color:transparent; }
+.project-line .project-action:hover, .project-line .project-action[data-popup-open] { background:rgba(128,128,138,.12); }
+html[data-studio-theme="dark"] .project-line:hover { background:rgba(255,255,255,.035); }
+html[data-studio-theme="dark"] .project-hover-tooltip, html[data-studio-theme="dark"] .project-info { border:1px solid #ffffff12; background:#2b2b2e; box-shadow:0 8px 24px #0003; }
+html[data-studio-theme="dark"] .project-info-detail+.project-info-detail { border-color:#ffffff10; }
+.directory-setting { padding:17px 0; border-bottom:1px solid #80808a25; display:flex;flex-direction:column;align-items:flex-start;gap:8px; }
+.directory-setting h3 { font-size:13px; font-weight:400; margin:0; }
+.directory-setting p { font:11px/1.7 ui-monospace,monospace; margin:0;overflow-wrap:anywhere;max-width:100%; }
+.directory-setting small { color:#9599a2;font-size:11px;line-height:1.7; }
+
+.video-status { margin:0;padding:7px 18px;font-size:11px;color:#858991;background:transparent; }

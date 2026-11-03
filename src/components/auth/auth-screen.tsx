@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Brand } from "@/components/brand";
+import { Brand } from "@/components/layout/brand";
 export function AuthScreen({ mode }: { mode: "login" | "register" }) {
   const register = mode === "register";
   return (

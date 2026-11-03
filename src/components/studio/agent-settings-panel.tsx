@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, X } from 'lucide-react';
-import { ModelSelect } from '@/components/model-select';
+import { ModelSelect } from '@/components/chat/model-select';
 import { chatModelKey, chatModelLabel, type ChatModel } from '@/lib/chat-models';
 import { type AgentSettings } from '@/lib/agent-settings';
 import { useMediaQuery } from '@/hooks/use-media-query';

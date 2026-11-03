@@ -1,0 +1,19 @@
+appId: studio.mestudio.desktop
+productName: me studio
+directories:
+  app: .studio/desktop-build/app
+  output: release
+files:
+  - '**/*'
+extraResources:
+  - from: .studio/desktop-build/runtime
+    to: runtime
+asar: true
+npmRebuild: false
+mac:
+  icon: public/brand/me-studio.icns
+  target:
+    - target: dir
+      arch: arm64
+  identity: null
+  category: public.app-category.video

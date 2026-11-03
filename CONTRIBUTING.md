@@ -7,7 +7,7 @@ Read AGENTS.md, PRODUCT.md, DESIGN.md and docs/architecture.md before changing b
 3. Plan multi-step work in docs/plans; persistent architecture decisions go in docs/decisions. Do not use AGENTS.md as a task log.
 4. Implement a small complete slice through contract → service → UI. New domain logic must not be added to the existing large studio page; extract the relevant responsibility.
 5. Test failure/data/permission behavior as well as success. Costly or destructive operations require idempotency and server ownership checks.
-6. Verify with npm test, npm run lint, npm run build; inspect changed UI. Report what was tested, what is still mocked, limitations and follow-ups. Do not equate build success with product acceptance.
+6. For code/config changes verify with npm test, npm run lint, npm run build; inspect changed UI and run relevant UI/API/native checks from AGENTS.md. For Markdown-only changes check links/paths/imports, script names and git diff --check; no rebuild/repackage is required. Report what was tested, what is still mocked, limitations and follow-ups. Do not equate build success with product acceptance.
 7. Update canonical docs in the same change. Avoid duplicate rules; link the source of truth. Do not commit unrelated existing work.
 
 Secrets go in ignored server env/config stores, never screenshots, fixtures, chats, public JSON or browser preferences. Use synthetic test values. Do not run paid upstream calls just to validate a refactor.

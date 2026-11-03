@@ -10,7 +10,19 @@ A checked item means verified in the described scope, not inferred from file exi
 - [ ] No secret in source, client bundle, browser storage, API response or logs.
 - [ ] Changes preserve existing local projects/assets or have an explicit tested migration.
 
-## Foundation regressions
+## Desktop V1 regressions
+- [ ] Home opens on brand/composer; no Project creation/manual scene form or automatic preview.
+- [ ] แชตใหม่/history/search/settings preserve per-chat drafts; IME Enter, keyboard navigation and focus return work.
+- [ ] White/light surfaces, thin monochrome icons and neutral hover/focus match DESIGN.md, including portalled dialogs.
+- [ ] Sample replies/artifacts and name-only attachments are identified honestly; provider metadata is not claimed as authentication.
+- [ ] Files opens explicitly; native folder picker cancel preserves the prior folder. Tree expansion/filter/refresh work with actual selected files.
+- [ ] Real MP4 plays/seeks through the packaged native protocol. Audio/image/text previews work; HTML/Python/SVG source is escaped and not executed.
+- [ ] Forged IDs, root escapes/symlinks and oversized text fail safely; media range/HEAD and root-grant revocation are covered.
+- [ ] Panel close/reopen preserves chat draft/folder state; narrow layout can switch tree/preview without overflow. Native grants end on app exit.
+- [ ] Browser-only access explains the native picker requirement; mock bridge tests are distinguished from real native checks.
+- [ ] Native build uses the changed main/preload/runtime, excludes env files/credentials and preserves user data.
+
+## Legacy foundation regressions
 - [ ] Stale workspace snapshot is rejected, original saved changes preserved; corrupt data is not overwritten.
 - [ ] Selected chat provider/model and stable attachment IDs reach the adapter.
 - [ ] Draft and attachments survive in-session project switching.
@@ -28,5 +40,5 @@ A checked item means verified in the described scope, not inferred from file exi
 - [ ] Self-host clean checkout setup and production secret management verified.
 - [ ] Open-source license selected by owner, references reviewed, secret scan and publish review complete.
 
-## Visual backlog
-Shared primary navigation, initial library border reduction and old settings/project dialog removal are implemented in the foundation slice but need browser visual verification. Further studio decomposition, CSS consolidation and artifact HTML preview remain open. No item is complete merely because a design rule was written.
+## Evidence and remaining scope
+The checkboxes above are release-gate templates, not a claim that a current run executed every check. Record actual evidence in dated docs/plans files; see the Files/frontend/search plans linked from [the AI guide](ai-guide.md). Legacy foundation gates apply to legacy routes, not to the accepted desktop V1 interaction. Further legacy studio decomposition, CSS consolidation and executable HTML artifact preview remain separate work. No item is complete merely because a design rule was written.

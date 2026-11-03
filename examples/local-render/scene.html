@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="h2v-duration" content="8s">
+<meta name="h2v-viewport" content="1080x1920">
+<title>Bew x Mac // กลางวัน - สวัสดีบิว ใช้แล้ว</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  html, body { width: 1080px; height: 1920px; background: #87ceeb; overflow: hidden; }
+  body { font-family: 'Noto Sans Thai', 'Segoe UI', system-ui, sans-serif; }
+  #stage { position: absolute; top: 0; left: 0; width: 1080px; height: 1920px; }
+  #subs {
+    position: absolute; left: 0; right: 0; bottom: 170px; text-align: center;
+    color: #fff; font-size: 64px; font-weight: 800; line-height: 1.5;
+    text-shadow: -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 3px 3px 0 #000,
+                 0 -3px 0 #000, 0 3px 0 #000, -3px 0 0 #000, 3px 0 0 #000;
+    opacity: 0; pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<canvas id="stage" width="1080" height="1920"></canvas>
+<div id="subs" data-h2v-hide></div>
+<script>
+(function () {
+  var cv = document.getElementById('stage');
+  var ctx = cv.getContext('2d');
+  var W = 1080, H = 1920;
+  var DUR = 8000;
+
+  var clamp01 = function (x) { return x < 0 ? 0 : x > 1 ? 1 : x; };
+  var lerp = function (a, b, t) { return a + (b - a) * t; };
+  var easeOutCubic = function (t) { return 1 - Math.pow(1 - t, 3); };
+  var easeInOutCubic = function (t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };
+  var seg = function (ms, start, dur, ease) {
+    return (ease || easeOutCubic)(clamp01((ms - start) / dur));
+  };
+
+  // ---------- เมฆ (กลางวัน) ----------
+  var clouds = [
+    { x: 120, y: 220, s: 1.0, v: 12 },
+    { x: 550, y: 420, s: 1.4, v: 8 },
+    { x: 850, y: 180, s: 0.8, v: 16 }
+  ];
+
+  function drawCloud(x, y, s) {
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.beginPath();
+    ctx.arc(x, y, 55 * s, 0, Math.PI * 2);
+    ctx.arc(x + 55 * s, y - 18 * s, 65 * s, 0, Math.PI * 2);
+    ctx.arc(x + 115 * s, y, 50 * s, 0, Math.PI * 2);
+    ctx.arc(x + 55 * s, y + 22 * s, 60 * s, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // ---------- background กลางวัน ----------
+  var buildings = [];
+  (function () {
+    var xs = [40, 180, 330, 480, 630, 780, 920];
+    for (var i = 0; i < xs.length; i++) {
+      buildings.push({ x: xs[i], w: 120, h: 260 + ((i * 137) % 220) });
+    }
+  })();
+
+  function drawBG(ms) {
+    // ฟ้าไล่สีกลางวัน
+    var g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#4aa8de');
+    g.addColorStop(0.5, '#8fd0f0');
+    g.addColorStop(0.75, '#cdeafb');
+    g.addColorStop(1, '#e8f6ff');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    // พระอาทิตย์
+    var sunX = 850, sunY = 300;
+    var glow = ctx.createRadialGradient(sunX, sunY, 20, sunX, sunY, 190);
+    glow.addColorStop(0, 'rgba(255,245,180,0.95)');
+    glow.addColorStop(0.4, 'rgba(255,236,140,0.55)');
+    glow.addColorStop(1, 'rgba(255,236,140,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(sunX - 200, sunY - 200, 400, 400);
+    ctx.fillStyle = '#fff6c9';
+    ctx.beginPath(); ctx.arc(sunX, sunY, 78, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffe14d';
+    ctx.beginPath(); ctx.arc(sunX, sunY, 62, 0, Math.PI * 2); ctx.fill();
+
+    // เมฆลอย
+    var t = ms / 1000;
+    for (var c = 0; c < clouds.length; c++) {
+      var cl = clouds[c];
+      var cx = ((cl.x + t * cl.v) % (W + 320)) - 160;
+      drawCloud(cx, cl.y + Math.sin(t * 0.7 + c * 2) * 12, cl.s);
+    }
+
+    // ตึกโทนกลางวัน (base y = 1450)
+    var baseY = 1450;
+    for (var b = 0; b < buildings.length; b++) {
+      var bd = buildings[b];
+      ctx.fillStyle = '#a9c6de';
+      ctx.fillRect(bd.x, baseY - bd.h, bd.w, bd.h);
+      // กระจกสะท้อนฟ้า
+      ctx.fillStyle = '#dceefb';
+      for (var wy = baseY - bd.h + 18; wy < baseY - 20; wy += 34) {
+        for (var wx = bd.x + 14; wx < bd.x + bd.w - 14; wx += 30) {
+          ctx.fillRect(wx, wy, 14, 18);
+        }
+      }
+      // ขอบตึก
+      ctx.strokeStyle = '#7ba7c7'; ctx.lineWidth = 3;
+      ctx.strokeRect(bd.x, baseY - bd.h, bd.w, bd.h);
+    }
+
+    // สนามหญ้า (พื้นกลางวัน)
+    var gg = ctx.createLinearGradient(0, baseY, 0, H);
+    gg.addColorStop(0, '#7cc46a');
+    gg.addColorStop(1, '#4e9e42');
+    ctx.fillStyle = gg;
+    ctx.fillRect(0, baseY, W, H - baseY);
+    // เส้นหญ้า
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 3;
+    for (var gx = 30; gx < W; gx += 90) {
+      ctx.beginPath(); ctx.moveTo(gx, baseY + 60); ctx.lineTo(gx + 14, baseY + 110); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(gx + 45, baseY + 200); ctx.lineTo(gx + 59, baseY + 250); ctx.stroke();
+    }
+  }
+
+  // ---------- ตัวละคร flat 2D ลายเส้นเดิม ----------
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function drawGuy(o) {
+    var s = o.s || 1;
+    ctx.save();
+    ctx.translate(o.x, o.y);
+    ctx.scale((o.flip ? -1 : 1) * s, s);
+    ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+    var bob = o.walk ? Math.abs(Math.sin(o.walk)) * 10 : Math.sin(o.idle || 0) * 4;
+    ctx.translate(0, -bob);
+
+    // เงา (กลางวัน = เทาเข้มบนหญ้า)
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    ctx.beginPath(); ctx.ellipse(0, bob * 0.4 + 6, 78, 16, 0, 0, Math.PI * 2); ctx.fill();
+
+    var legSwing = o.walk ? Math.sin(o.walk) * 26 : 0;
+    ctx.strokeStyle = '#23262e'; ctx.lineWidth = 30;
+    ctx.beginPath(); ctx.moveTo(-18, -150); ctx.lineTo(-18 + legSwing, 0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(18, -150); ctx.lineTo(18 - legSwing, 0); ctx.stroke();
+
+    ctx.fillStyle = o.shirt; ctx.strokeStyle = '#0d0f16'; ctx.lineWidth = 6;
+    roundRect(-62, -330, 124, 190, 34); ctx.fill(); ctx.stroke();
+
+    ctx.strokeStyle = o.shirt; ctx.lineWidth = 34;
+    if (o.wave) {
+      var wv = Math.sin((o.waveT || 0) * 0.02) * 0.45;
+      ctx.save(); ctx.translate(58, -300); ctx.rotate(-2.2 + wv);
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -110); ctx.stroke(); ctx.restore();
+      ctx.fillStyle = o.skin;
+      ctx.beginPath(); ctx.arc(58, -410, 20, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-58, -300); ctx.lineTo(-78, -190); ctx.stroke();
+    } else {
+      var sw = o.walk ? Math.sin(o.walk) * 0.5 : Math.sin((o.idle || 0) * 0.7) * 0.08;
+      ctx.save(); ctx.translate(-58, -300); ctx.rotate(0.25 + sw);
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 105); ctx.stroke(); ctx.restore();
+      ctx.save(); ctx.translate(58, -300); ctx.rotate(-0.25 - sw);
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 105); ctx.stroke(); ctx.restore();
+    }
+
+    ctx.fillStyle = o.skin; ctx.strokeStyle = '#0d0f16'; ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.arc(0, -410, 68, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+    ctx.fillStyle = o.hair;
+    if (o.longHair) {
+      roundRect(-78, -490, 156, 150, 40); ctx.fill();
+      ctx.fillRect(-78, -430, 22, 130);
+      ctx.fillRect(56, -430, 22, 130);
+      ctx.fillStyle = o.skin;
+      ctx.beginPath(); ctx.arc(0, -405, 58, 0, Math.PI * 2); ctx.fill();
+    } else {
+      ctx.beginPath(); ctx.arc(0, -428, 70, Math.PI, Math.PI * 2); ctx.fill();
+      ctx.fillRect(-70, -445, 140, 26);
+    }
+
+    var blink = (o.blinkT != null && (o.blinkT % 2600) > 2450);
+    ctx.fillStyle = '#fff';
+    if (blink) {
+      ctx.strokeStyle = '#111'; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(-38, -410); ctx.lineTo(-12, -410); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(12, -410); ctx.lineTo(38, -410); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.ellipse(-25, -410, 15, 19, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(25, -410, 15, 19, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#14161c';
+      var lx = o.lookX || 0;
+      ctx.beginPath(); ctx.arc(-25 + lx, -406, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(25 + lx, -406, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(-27 + lx, -412, 2.6, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(23 + lx, -412, 2.6, 0, Math.PI * 2); ctx.fill();
+    }
+
+    ctx.strokeStyle = '#14161c'; ctx.lineWidth = 5;
+    if (o.mouth === 'open') {
+      ctx.fillStyle = '#7a1f1f';
+      ctx.beginPath(); ctx.ellipse(0, -368, 14, 18, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    } else if (o.mouth === 'smile') {
+      ctx.beginPath(); ctx.arc(0, -382, 24, 0.25, Math.PI - 0.25); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.moveTo(-14, -370); ctx.lineTo(14, -370); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function bubble(x, y, text, align) {
+    ctx.font = '800 54px "Noto Sans Thai", sans-serif';
+    var w = ctx.measureText(text).width + 90;
+    var bx = align === 'right' ? x - w : x;
+    var by = y;
+    ctx.fillStyle = 'rgba(255,255,255,0.96)';
+    ctx.strokeStyle = '#0d0f16'; ctx.lineWidth = 6;
+    roundRect(bx, by, w, 96, 48); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.96)';
+    var tx = align === 'right' ? bx + w - 70 : bx + 70;
+    ctx.beginPath(); ctx.moveTo(tx - 22, by + 90); ctx.lineTo(tx + 22, by + 90); ctx.lineTo(tx, by + 130); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#111';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, bx + 45, by + 50);
+  }
+
+  var subsEl = document.getElementById('subs');
+
+  // ---------- timeline 8 วิ ----------
+  function seek(ms) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    drawBG(ms);
+
+    // TITLE เปิดหัว (0 - 1.2s) โทนกลางวัน
+    var titleP = seg(ms, 0, 500);
+    if (ms < 1300) {
+      ctx.save();
+      ctx.globalAlpha = 1 - seg(ms, 900, 400);
+      ctx.translate(W / 2, 330 + (1 - titleP) * -40);
+      ctx.scale(0.7 + titleP * 0.3, 0.7 + titleP * 0.3);
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#1a6fa8'; ctx.lineWidth = 10;
+      ctx.font = '900 120px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.strokeText('GOOD DAY', 0, 0);
+      ctx.fillText('GOOD DAY', 0, 0);
+      // ไอคอนพระอาทิตย์เล็ก
+      ctx.fillStyle = '#ffdf3d';
+      ctx.beginPath(); ctx.arc(0, 130, 44, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#e8a100'; ctx.lineWidth = 8;
+      for (var r = 0; r < 8; r++) {
+        var a = r / 8 * Math.PI * 2 + ms / 2000;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * 60, 130 + Math.sin(a) * 60);
+        ctx.lineTo(Math.cos(a) * 80, 130 + Math.sin(a) * 80);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    var groundY = 1450;
+
+    // Bew ยืนรอซ้าย
+    drawGuy({
+      x: 300, y: groundY, s: 1.05,
+      skin: '#f2c9a0', shirt: '#3fa7d6', hair: '#15161c', longHair: false,
+      idle: ms / 350, blinkT: ms, mouth: ms > 5200 ? 'smile' : 'flat'
+    });
+    ctx.fillStyle = 'rgba(20,40,60,0.85)'; ctx.font = '700 40px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('บิว', 300, groundY + 60);
+    ctx.fillText('แมค', 780, groundY + 60);
+
+    // Mac เดินเข้าจากขวา (0.4s - 2.6s)
+    var walkP = seg(ms, 400, 2200, easeInOutCubic);
+    var macX = lerp(1150, 780, walkP);
+    var walking = ms > 400 && ms < 2600;
+    drawGuy({
+      x: macX, y: groundY, s: 1.05,
+      skin: '#e8b88a', shirt: '#ff7847', hair: '#15161c', longHair: false,
+      walk: walking ? ms / 90 : 0, idle: ms / 350, blinkT: ms,
+      mouth: (ms >= 2700 && ms < 4200) ? 'open' : 'flat',
+      wave: ms >= 2700 && ms < 4200, waveT: ms,
+      lookX: -4
+    });
+
+    if (ms >= 2700 && ms < 4400) {
+      ctx.save();
+      ctx.globalAlpha = seg(ms, 2700, 200);
+      bubble(880, 560, 'หวัดดีบิว', 'right');
+      ctx.restore();
+      subsEl.style.opacity = 1;
+      subsEl.innerHTML = 'หวัดดีบิว';
+    } else if (ms >= 4800 && ms < 7000) {
+      ctx.save();
+      ctx.globalAlpha = seg(ms, 4800, 200);
+      bubble(200, 560, 'ใช้แล้ว', 'left');
+      ctx.restore();
+      subsEl.style.opacity = 1;
+      subsEl.innerHTML = 'ใช้แล้ว';
+    } else {
+      subsEl.style.opacity = 0;
+    }
+
+    if (ms >= 7000) {
+      ctx.fillStyle = 'rgba(20,60,90,0.9)';
+      ctx.font = '800 58px "Noto Sans Thai", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.save();
+      ctx.globalAlpha = seg(ms, 7000, 400);
+      ctx.fillText('aicatoon • bew x mac', W / 2, 250);
+      ctx.restore();
+    }
+  }
+
+  window.seek = seek;
+  seek(0);
+
+  if (!window.__SCRUB__) {
+    var start = null;
+    (function loop(now) {
+      if (start === null) start = now;
+      seek((now - start) % DUR);
+      requestAnimationFrame(loop);
+    })(performance.now());
+  }
+})();
+</script>
+</body>
+</html>

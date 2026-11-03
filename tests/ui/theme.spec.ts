@@ -1,0 +1,32 @@
+import { test, expect } from '@playwright/test';
+
+test('theme persists and follows device changes, with a thin provider input focus', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.goto('/desktop');
+  await page.getByRole('button', { name: 'ตั้งค่า', exact: true }).click();
+  const theme = page.getByRole('radiogroup', { name: 'รูปแบบหน้าตา' });
+  await expect(theme.getByRole('radio', { name: 'สว่าง' })).toBeChecked();
+  await theme.getByRole('radio', { name: 'มืด' }).check();
+  await expect(page.locator('html')).toHaveAttribute('data-studio-theme', 'dark');
+  await page.reload();
+  await page.getByRole('button', { name: 'ตั้งค่า', exact: true }).click();
+  await expect(theme.getByRole('radio', { name: 'มืด' })).toBeChecked();
+  await theme.getByRole('radio', { name: 'ตามอุปกรณ์' }).check();
+  await expect(page.locator('html')).toHaveAttribute('data-studio-theme', 'light');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(page.locator('html')).toHaveAttribute('data-studio-theme', 'dark');
+  await page.getByRole('tab', { name: 'ผู้ให้บริการ AI' }).click();
+  await expect(page.locator('.settings-body')).toHaveCSS('border-top-width','0px');
+  const button=page.getByRole('button',{name:'โหลดคีย์ AI / เสียง'});
+  const intro=page.getByText('AI ใช้เขียนเรื่องและฉาก ส่วน HTML → MP4 เรนเดอร์ในเครื่อง ไม่ต้องใช้คีย์สร้างวิดีโอ');
+  const buttonBox=await button.boundingBox(),introBox=await intro.boundingBox();
+  expect(introBox!.y).toBeGreaterThan(buttonBox!.y+buttonBox!.height);
+  await page.screenshot({path:'.studio/frontend-review/settings-fix.png'});
+  await page.getByRole('button', { name: 'ตั้งค่า OpenAI' }).click();
+  const endpoint = page.getByLabel('API endpoint');
+  await endpoint.click();
+  await expect(endpoint).toBeFocused();
+  await expect(endpoint).toHaveCSS('outline-width', '1px');
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-studio-theme', 'dark');
+});

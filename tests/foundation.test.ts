@@ -96,6 +96,24 @@ test('Meta direct models and credentials are distinct from OpenRouter routes', (
   assert.equal(catalog.providers.find((provider)=>provider.id==='openrouter')?.credentialConfigured,false);
   assert.doesNotMatch(JSON.stringify(catalog),/meta-synthetic-secret/);
 });
+test('OpenAI, Contributor and speech defaults expose metadata without credentials', () => {
+  const catalog = buildCatalog({
+    OPENAI_API_KEY: 'synthetic-openai-private', META_API_KEY: 'synthetic-meta-private', ELEVENLABS_API_KEY: 'synthetic-voice-private',
+    STUDIO_OPENAI_MODELS: JSON.stringify([{ id: 'gpt-6-luna', label: 'GPT-6 Luna' }]),
+    STUDIO_DEFAULT_CHAT_PROVIDER: 'openai', STUDIO_DEFAULT_CHAT_MODEL: 'gpt-6-luna',
+    STUDIO_META_MODELS: JSON.stringify([{ id: 'muse-spark-1.3-contributor', label: 'Muse Spark 1.3 Contributor' }]),
+    STUDIO_SPEECH_MODELS: JSON.stringify([{ id: 'eleven_v3', label: 'Eleven v3' }]),
+    STUDIO_SPEECH_VOICE_ID: 'JBFqnCBsd6RMkjVDRZzb', STUDIO_SPEECH_VOICE_LABEL: 'George',
+  });
+  assert.equal(catalog.providers.find(p => p.id === 'openai')?.credentialConfigured, true);
+  assert.equal(catalog.models.find(m => m.provider === 'openai')?.modelId, 'gpt-6-luna');
+  assert.equal(catalog.models.find(m => m.provider === 'meta')?.modelId, 'muse-spark-1.3-contributor');
+  assert.equal(catalog.speechVoice?.voiceId, 'JBFqnCBsd6RMkjVDRZzb');
+  assert.equal(catalog.liveChatEnabled, false);
+  assert.deepEqual(catalog.defaultChatModel, {provider:'openai',modelId:'gpt-6-luna'});
+  assert.doesNotMatch(JSON.stringify(catalog), /synthetic-.*-private|API_KEY|api\.openai|api\.meta/);
+  assert.throws(() => buildCatalog({STUDIO_DEFAULT_CHAT_PROVIDER:'openai',STUDIO_DEFAULT_CHAT_MODEL:'not-configured'}), /INVALID_DEFAULT_CHAT_MODEL/);
+});
 test('model selection includes provider identity', async () => {
   const { chatModelKey }=await import('../src/lib/chat-models');
   assert.notEqual(chatModelKey({provider:'meta',modelId:'same'}),chatModelKey({provider:'openrouter',modelId:'same'}));

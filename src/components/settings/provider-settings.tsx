@@ -1,7 +1,7 @@
 "use client";
 import "./model-recommendations.css";
 import { useEffect, useState } from 'react';
-import { ModelSelect } from '@/components/model-select';
+import { ModelSelect } from '@/components/chat/model-select';
 import { loadProviderCatalog } from '@/services/provider-catalog';
 import type { ProviderCatalog } from '@/lib/provider-config';
 import recommendations from '@/data/model-recommendations.json';

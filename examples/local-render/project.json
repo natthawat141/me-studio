@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "title": "ทักทายยามเช้า — ตัวอย่างเรนเดอร์จากงานเดิม",
+  "entry": "scene.html",
+  "width": 1080,
+  "height": 1920,
+  "fps": 30,
+  "durationSeconds": 8,
+  "assets": [],
+  "audio": [
+    { "file": "hello.mp3", "startMs": 2700, "volume": 1 },
+    { "file": "reply.mp3", "startMs": 4800, "volume": 1 }
+  ]
+}

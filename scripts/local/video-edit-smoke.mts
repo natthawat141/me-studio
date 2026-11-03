@@ -1,0 +1,12 @@
+import { readFile,mkdir,writeFile } from 'node:fs/promises';
+import { resolve,join } from 'node:path';
+import { createProductionTools,initializeSkills } from '../../src/server/video/production.mjs';
+const source=resolve('.studio/animation-edit-demo');await mkdir(source,{recursive:true});
+if(!process.argv[2])throw Error('Usage: tsx scripts/local/video-edit-smoke.mts /path/to/generated-animation');
+const original=resolve(process.argv[2]);
+const scene=JSON.parse(await readFile(join(original,'scene.json'),'utf8'));
+const p=await createProductionTools({source,outputRoot:join(source,'output'),skillRoot:await initializeSkills(source,resolve('skills'))});
+const manifest=JSON.parse(await readFile(join(original,'project.json'),'utf8'));
+await p.save(scene);await p.useReviewedAudio(manifest.audio.map((t:{file:string;startMs:number})=>({path:join(original,t.file),startMs:t.startMs})));
+const full=await p.render(true);const trim=p.tools.find(t=>t.name==='trim_video')!;await trim.execute('trim',{start:0,end:7.8});
+await writeFile(join(source,'result.json'),JSON.stringify({full,trimmed:p.artifact()},null,2));console.log(JSON.stringify({full,trimmed:p.artifact()}));

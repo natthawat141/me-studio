@@ -50,3 +50,8 @@ next-env.d.ts
 # Local-only historical notes and screenshots may contain private references.
 /docs/archive/
 /docs/me-studio.png
+
+# Local renderer input snapshots, logs and immutable MP4 output.
+/.studio/
+/dist-desktop/
+/release/

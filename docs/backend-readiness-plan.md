@@ -1,7 +1,13 @@
 # Backend readiness and implementation order
 
+## Current priority: local-first hackathon prototype
+
+The user selected a local npm-based version on 2026-11-02. Follow [local-first milestones](plans/2026-11-02-local-first.md) and [ADR 0004](decisions/0004-local-first-runtime.md) first. A reviewed-input CLI renderer is now implemented and separately tested; studio-to-job integration, real AI and disk-backed application projects are not implemented. The roadmap below describes the future hosted SaaS; it does not block local CLI work or authorize unprotected paid endpoints.
+
+A subsequent request added an internal open-source [Pi harness and SQLite memory foundation](agent-harness.md), verified offline. This does not implement project/account persistence, live model access, protected endpoints or the renderer's sandbox boundary.
+
 ## Readiness
-Ready to start backend development; not ready to launch SaaS. Foundation now has safe config validation, runtime health/catalog routes, typed mock chat input and regression checks. No real provider requests, database, session or render jobs exist.
+Ready to start backend development; not ready to launch SaaS. Foundation has safe config validation, runtime health/catalog routes, typed mock chat input, internal harness/SQLite memory and regression checks. No real provider requests, tenant/application database, authenticated session or hosted render jobs exist; local CLI render jobs are standalone disk records.
 
 ## Milestone 1 — identity and persistent owned projects
 Decision needed: auth vendor and deployment target. Recommendation: modular Next.js API, Postgres metadata and object storage; no vendor provisioned yet.
