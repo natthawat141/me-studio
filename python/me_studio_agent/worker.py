@@ -28,7 +28,7 @@ async def serve(provider_factory=OpenAIProvider):
     config = await read_line()
     if config.get("protocol") != 1 or not re.fullmatch(r"[a-zA-Z0-9._:/-]{1,160}", config.get("model", "")) or config.get("provider", "openai") not in ("openai", "openrouter", "meta"):
         raise RuntimeError("INVALID_PROTOCOL")
-    provider = (OpenAIProvider(config["apiKey"], model=config["model"], provider=config.get("provider", "openai"))
+    provider = (OpenAIProvider(config["apiKey"], model=config["model"], provider=config.get("provider", "openai"), reasoning=config.get("reasoning","auto"), limits=config["limits"])
                 if provider_factory is OpenAIProvider else provider_factory(config["apiKey"]))
     config.pop("apiKey", None)
     sequence = 0

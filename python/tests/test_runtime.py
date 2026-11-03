@@ -5,7 +5,7 @@ from pathlib import Path
 import httpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "me_studio_agent"))
-from runtime import OpenAIProvider, history_input, run_agent
+from legacy_runtime import OpenAIProvider, history_input, run_agent
 
 
 class RuntimeTests(unittest.IsolatedAsyncioTestCase):

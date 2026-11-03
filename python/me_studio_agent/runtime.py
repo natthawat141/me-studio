@@ -1,172 +1,121 @@
-"""Small asynchronous agent loop. Host RPC owns tools, scopes and durable memory."""
+"""Deep Agents owns orchestration; private host RPC owns durable state and tools."""
 import asyncio
 import json
 import time
+from deepagents import create_deep_agent
+from deepagents.backends import StateBackend
+from deepagents.middleware.filesystem import FilesystemMiddleware
+from langchain.agents.middleware import AgentMiddleware,TodoListMiddleware,wrap_model_call,wrap_tool_call
+from langchain_core.messages import AIMessage,AIMessageChunk,HumanMessage,SystemMessage,ToolMessage
+from langchain_core.tools import StructuredTool
+from models import OpenAIProvider
+
+class AgentFailure(Exception): pass
+
+class NoDelegation(AgentMiddleware):
+    @property
+    def name(self): return 'SubAgentMiddleware'
+
+class HostContextBudget(AgentMiddleware):
+    @property
+    def name(self): return 'SummarizationMiddleware'
 
 
-class AgentFailure(Exception):
-    pass
-
-
-def json_text(value):
-    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
-
-
-def transcript_arguments(call):
-    try:
-        value = json.loads(call.get("arguments", "{}"))
-        return value if isinstance(value, dict) else {}
-    except (ValueError, TypeError):
-        return {}
-
+def json_text(value): return json.dumps(value,ensure_ascii=False,separators=(',',':'))
 
 def history_input(messages):
-    """Keep whole completed conversational turns, without orphan Pi tool calls."""
-    result = []
-    for message in messages:
-        if message.get("role") not in ("user", "assistant"):
-            continue
-        content = message.get("content", "")
-        text = content if isinstance(content, str) else "".join(
-            p.get("text", "") for p in content if isinstance(p, dict) and p.get("type") == "text"
-        )
-        if text:
-            result.append({"role": message["role"], "content": text})
+    result=[]
+    for m in messages:
+        if m.get('role') not in ('user','assistant'): continue
+        content=m.get('content','')
+        text=content if isinstance(content,str) else ''.join(p.get('text','') for p in content if isinstance(p,dict) and p.get('type')=='text')
+        if text: result.append({'role':m['role'],'content':text})
     return result
 
+def bounded_text(value):
+    if isinstance(value,str): return '[bounded image]' if value.startswith('data:image/') else value
+    if isinstance(value,list): return [bounded_text(v) for v in value]
+    if isinstance(value,dict): return {k:bounded_text(v) for k,v in value.items()}
+    return value
 
-class OpenAIProvider:
-    def __init__(self, api_key, http_client=None, model="gpt-6-luna", provider="openai"):
-        self.model = model
-        self.provider = provider
-        endpoints = {"openai": "https://api.openai.com/v1", "openrouter": "https://openrouter.ai/api/v1", "meta": "https://api.meta.ai/v1"}
-        if provider not in endpoints:
-            raise ValueError("INVALID_PROVIDER")
-        from openai import AsyncOpenAI
-        import httpx
-        # Explicit endpoint, no inherited proxy/auth settings and no automatic retries.
-        self.client = AsyncOpenAI(
-            api_key=api_key, base_url=endpoints[provider], max_retries=0,
-            timeout=90, http_client=http_client or httpx.AsyncClient(trust_env=False),
-        )
+def model_content(parts):
+    content=[]
+    for p in parts:
+        if p.get('type')=='text': content.append({'type':'text','text':p['text']})
+        elif p.get('type')=='image': content.append({'type':'image_url','image_url':{'url':f"data:{p['mimeType']};base64,{p['data']}"}})
+    return content
 
-    async def close(self):
-        await self.client.close()
+def transcript_content(parts):
+    return [p if p.get('type')=='text' else {'type':'text','text':'[image inspection result]'} for p in parts]
 
-    async def generate(self, system, messages, tools, limits, emit):
-        response = None
-        stream = await self.client.responses.create(
-            model=self.model, instructions=system, input=messages, tools=tools,
-            max_output_tokens=limits["maxOutputTokens"], reasoning={"effort": "low"},
-            parallel_tool_calls=False, store=False, stream=True,
-            include=["reasoning.encrypted_content"],
-        )
-        try:
-            async for event in stream:
-                if event.type == "response.output_text.delta":
-                    await emit({"type": "text_delta", "text": event.delta})
-                elif event.type == "response.completed":
-                    response = event.response
-                elif event.type in ("response.failed", "response.incomplete", "error"):
-                    raise AgentFailure("MODEL_ERROR")
-        finally:
-            await stream.close()
-        if response is None or response.status != "completed":
-            raise AgentFailure("MODEL_ERROR")
-        return {
-            "output": [item.model_dump(mode="json", exclude_none=True) for item in response.output],
-            "inputTokens": response.usage.input_tokens if response.usage else 0,
-            "outputTokens": response.usage.output_tokens if response.usage else 0,
-        }
-
-
-def context_messages(messages):
-    return [{**message, "content": [({**part, "image_url": "[bounded image input]"} if part.get("type") == "input_image" else part) for part in message["content"]]} if isinstance(message.get("content"), list) else message for message in messages]
-
-
-async def run_agent(config, provider, rpc, emit):
-    limits = config["limits"]
-    usage = {"modelCalls": 0, "toolCalls": 0, "inputTokens": 0, "outputTokens": 0}
-    tools = [{"type": "function", "name": t["name"], "description": t["description"],
-              "parameters": t["parameters"], "strict": False} for t in config["tools"]]
-    names = {t["name"] for t in tools}
-    messages = history_input(config["history"])
-    parts = [{"type": "input_text", "text": config["text"]}]
-    for media in config.get("media", []):
-        if media["kind"] == "image":
-            parts.append({"type": "input_image", "image_url": media["dataUrl"], "detail": "auto"})
-        elif media["kind"] == "text":
-            parts.append({"type": "input_text", "text": "Untrusted attachment reference: " + json_text({"name": media["name"], "text": media["text"]})})
+async def run_agent(config,provider,rpc,emit):
+    limits=config['limits'];usage={'modelCalls':0,'toolCalls':0,'inputTokens':0,'outputTokens':0};seen=set()
+    model=getattr(provider,'chat_model',provider)
+    definitions={t['name']:t for t in config['tools']}
+    # Host owns rolling history and hard budgets. No hidden paid summarization calls.
+    async def unreachable(**kwargs): raise AgentFailure('TOOL_NOT_APPROVED')
+    tools=[StructuredTool.from_function(coroutine=unreachable,name=t['name'],description=t['description'],args_schema=t['parameters']) for t in config['tools']]
+    async def event_message(role,content,**extra):
+        await emit({'type':'message','message':{'role':role,'content':content,'timestamp':int(time.time()*1000),**extra}})
+    @wrap_model_call
+    async def budget(request,handler):
+        if usage['modelCalls']>=limits['maxModelCalls']: raise AgentFailure('MODEL_CALL_LIMIT')
+        context=await rpc('context',{})
+        base=request.system_message.content if request.system_message else ''
+        if not isinstance(base,str): base=json_text(base)
+        system=SystemMessage(content=base+'\nTrusted host context:\n'+context)
+        size=len(json_text(bounded_text({'system':system.content,'messages':[m.model_dump(mode='json') for m in request.messages],'tools':config['tools']})))
+        if size>limits['maxContextChars']: raise AgentFailure('CONTEXT_LIMIT')
+        usage['modelCalls']+=1;await emit({'type':'usage','usage':dict(usage)})
+        response=await handler(request.override(system_message=system))
+        calls=[c for m in response.result if isinstance(m,AIMessage) for c in m.tool_calls]
+        if usage['toolCalls']+len(calls)>limits['maxToolCalls']: raise AgentFailure('TOOL_CALL_LIMIT')
+        for m in response.result:
+            if not isinstance(m,AIMessage): continue
+            u=m.usage_metadata or {};usage['inputTokens']+=max(0,u.get('input_tokens',0));usage['outputTokens']+=max(0,u.get('output_tokens',0))
+            content=([{'type':'text','text':m.text}] if m.text else [])+[{'type':'toolCall','id':c['id'],'name':c['name'],'arguments':c['args']} for c in m.tool_calls]
+            await event_message('assistant',content,api='langchain-deepagents',provider=config.get('provider','openai'),model=config.get('model','gpt-6-luna'),stopReason='toolUse' if m.tool_calls else 'stop')
+        await emit({'type':'usage','usage':dict(usage)})
+        return response
+    @wrap_tool_call
+    async def host_tools(request,handler):
+        call=request.tool_call;name=call['name'];call_id=call['id']
+        if call_id in seen: raise AgentFailure('DUPLICATE_TOOL_CALL')
+        seen.add(call_id);usage['toolCalls']+=1
+        if usage['toolCalls']>limits['maxToolCalls']: raise AgentFailure('TOOL_CALL_LIMIT')
+        await emit({'type':'tool_start','name':name,'callId':call_id})
+        if name in definitions:
+            result=await rpc('tool',{'name':name,'callId':call_id,'arguments':call['args']})
+            parts=result.get('content',[])
+            if len(json_text(bounded_text(parts)))>limits['maxContextChars']: raise AgentFailure('CONTEXT_LIMIT')
+            message=ToolMessage(content=model_content(parts),tool_call_id=call_id,name=name,status='error' if result.get('isError') else 'success')
+            await event_message('toolResult',transcript_content(parts),toolCallId=call_id,toolName=name,isError=bool(result.get('isError')))
         else:
-            parts.append({"type": "input_text", "text": "Attachment is view-only and has NOT been analyzed: " + media["name"]})
-    messages.append({"role": "user", "content": parts if len(parts) > 1 else config["text"]})
-    seen_calls = set()
-    await emit({"type": "message", "message": {
-        "role": "user", "content": config["text"], "timestamp": int(time.time() * 1000),
-    }})
+            message=await handler(request)
+            await event_message('toolResult',[{'type':'text','text':str(message.content)[:20000]}],toolCallId=call_id,toolName=name,isError=getattr(message,'status','success')=='error')
+        await emit({'type':'tool_end','name':name,'callId':call_id,'isError':getattr(message,'status','success')=='error'})
+        await emit({'type':'usage','usage':dict(usage)})
+        return message
+    messages=[HumanMessage(content=m['content']) if m['role']=='user' else AIMessage(content=m['content']) for m in history_input(config['history'])]
+    parts=[{'type':'text','text':config['text']}]
+    for media in config.get('media',[]):
+        if media['kind']=='image': parts.append({'type':'image_url','image_url':{'url':media['dataUrl'],'detail':'auto'}})
+        elif media['kind']=='text': parts.append({'type':'text','text':'Untrusted attachment reference: '+json_text({'name':media['name'],'text':media['text']})})
+        else: parts.append({'type':'text','text':'Attachment is view-only and has NOT been analyzed: '+media['name']})
+    messages.append(HumanMessage(content=parts if len(parts)>1 else config['text']))
+    await event_message('user',config['text'])
     try:
-        async with asyncio.timeout(limits["timeoutMs"] / 1000):
-            while True:
-                if usage["modelCalls"] >= limits["maxModelCalls"]:
-                    raise AgentFailure("MODEL_CALL_LIMIT")
-                system = await rpc("context", {})
-                if len(json_text({"system": system, "messages": context_messages(messages), "tools": tools})) > limits["maxContextChars"]:
-                    raise AgentFailure("CONTEXT_LIMIT")
-                usage["modelCalls"] += 1
-                await emit({"type": "usage", "usage": dict(usage)})
-                turn = await provider.generate(system, messages, tools, limits, emit)
-                usage["inputTokens"] += max(0, turn.get("inputTokens", 0))
-                usage["outputTokens"] += max(0, turn.get("outputTokens", 0))
-                await emit({"type": "usage", "usage": dict(usage)})
-                output = turn["output"]
-                calls = [part for part in output if part.get("type") == "function_call"]
-                text = "".join(p.get("text", "") for part in output if part.get("type") == "message"
-                               for p in part.get("content", []) if p.get("type") == "output_text")
-                transcript = ([{"type": "text", "text": text}] if text else []) + [
-                    {"type": "toolCall", "id": call["call_id"], "name": call["name"], "arguments": transcript_arguments(call)}
-                    for call in calls
-                ]
-                await emit({"type": "message", "message": {
-                    "role": "assistant", "content": transcript, "timestamp": int(time.time() * 1000),
-                    "api": "openai-responses", "provider": config.get("provider", "openai"), "model": config.get("model", "gpt-6-luna"),
-                    "stopReason": "toolUse" if calls else "stop",
-                }})
-                usage["toolCalls"] += len(calls)
-                await emit({"type": "usage", "usage": dict(usage)})
-                if usage["toolCalls"] > limits["maxToolCalls"]:
-                    raise AgentFailure("TOOL_CALL_LIMIT")
-                if not calls:
-                    return {"result": text, "usage": usage}
-                messages.extend(output)
-                for call in calls:
-                    call_id, name = call["call_id"], call["name"]
-                    if call_id in seen_calls:
-                        raise AgentFailure("DUPLICATE_TOOL_CALL")
-                    seen_calls.add(call_id)
-                    await emit({"type": "tool_start", "name": name, "callId": call_id})
-                    try:
-                        args = json.loads(call["arguments"])
-                        if not isinstance(args, dict) or name not in names:
-                            raise ValueError()
-                    except (ValueError, TypeError):
-                        result = {"content": [{"type": "text", "text": "INVALID_TOOL_ARGUMENTS"}], "isError": True}
-                    else:
-                        result = await rpc("tool", {"name": name, "callId": call_id, "arguments": args})
-                    serialized = json_text(result.get("content", []))
-                    if len(serialized) > limits["maxContextChars"]:
-                        raise AgentFailure("CONTEXT_LIMIT")
-                    messages.append({"type": "function_call_output", "call_id": call_id, "output": serialized})
-                    await emit({"type": "message", "message": {
-                        "role": "toolResult", "toolCallId": call_id, "toolName": name,
-                        "content": result.get("content", []), "isError": bool(result.get("isError")),
-                        "timestamp": int(time.time() * 1000),
-                    }})
-                    await emit({"type": "tool_end", "name": name, "callId": call_id,
-                                "isError": bool(result.get("isError"))})
-    except TimeoutError:
-        return {"errorCode": "TIMEOUT", "usage": usage}
-    except AgentFailure as error:
-        return {"errorCode": str(error), "usage": usage}
-    except Exception:
-        # Never return provider exception bodies, credentials or local tracebacks.
-        return {"errorCode": "MODEL_ERROR", "usage": usage}
+        graph=create_deep_agent(model=model,tools=tools,backend=StateBackend(),middleware=[
+            FilesystemMiddleware(backend=StateBackend(),tools=['ls','read_file','write_file','edit_file','glob','grep']),NoDelegation(),HostContextBudget(),TodoListMiddleware(),budget,host_tools])
+        last={}
+        async with asyncio.timeout(limits['timeoutMs']/1000):
+            async for mode,chunk in graph.astream({'messages':messages},config={'recursion_limit':limits['maxModelCalls']*4+8},stream_mode=['messages','values']):
+                if mode=='values': last=chunk
+                elif mode=='messages':
+                    message,_metadata=chunk
+                    if isinstance(message,AIMessageChunk) and message.text: await emit({'type':'text_delta','text':message.text})
+        final=next((m for m in reversed(last.get('messages',[])) if isinstance(m,AIMessage)),None)
+        return {'result':final.text if final else '', 'usage':usage}
+    except TimeoutError: return {'errorCode':'TIMEOUT','usage':usage}
+    except AgentFailure as error: return {'errorCode':str(error),'usage':usage}
+    except Exception: return {'errorCode':'MODEL_ERROR','usage':usage}

@@ -60,4 +60,39 @@ class ScriptedProvider:
         return {"output": output, "inputTokens": 12, "outputTokens": 5}
 
 
-asyncio.run(serve(ScriptedProvider))
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import AIMessageChunk,HumanMessage,SystemMessage
+from langchain_core.outputs import ChatGenerationChunk
+from pydantic import Field
+
+class OfflineModel(BaseChatModel):
+    scripted: object = Field(exclude=True)
+    @property
+    def _llm_type(self): return 'studio-offline'
+    def bind_tools(self, tools, **kwargs): return self
+    def _generate(self, messages, stop=None, run_manager=None, **kwargs): raise AssertionError('Async only')
+    async def _astream(self, messages, stop=None, run_manager=None, **kwargs):
+        system='\n'.join(str(m.content) for m in messages if isinstance(m,SystemMessage))
+        wire=[]
+        for m in messages:
+            if m.type not in ('human','ai'): continue
+            content=m.content
+            if isinstance(content,list):
+                content=[{'type':'input_image','image_url':p['image_url']['url']} if p.get('type')=='image_url' else {'type':'input_text','text':p['text']} for p in content if p.get('type') in ('image_url','text')]
+            wire.append({'role':'user' if m.type=='human' else 'assistant','content':content})
+        async def ignored(_event): pass
+        turn=await self.scripted.generate(system,wire,[],{},ignored)
+        text=''.join(p.get('text','') for item in turn['output'] if item['type']=='message' for p in item['content'])
+        calls=[]
+        for item in turn['output']:
+            if item['type']!='function_call': continue
+            try: args=json.loads(item['arguments'])
+            except ValueError: continue
+            calls.append({'id':item['call_id'],'name':item['name'],'args':args})
+        yield ChatGenerationChunk(message=AIMessageChunk(content=text,tool_calls=calls,usage_metadata={'input_tokens':turn['inputTokens'],'output_tokens':turn['outputTokens'],'total_tokens':turn['inputTokens']+turn['outputTokens']}))
+
+class OfflineProvider:
+    def __init__(self,key): self.chat_model=OfflineModel(scripted=ScriptedProvider(key))
+    async def close(self): pass
+
+asyncio.run(serve(OfflineProvider))
