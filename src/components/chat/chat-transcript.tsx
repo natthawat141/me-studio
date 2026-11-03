@@ -1,6 +1,7 @@
 'use client';
 
 import { useLayoutEffect, useRef } from 'react';
+import {ChatMarkdown} from './chat-markdown';
 import { Paperclip } from 'lucide-react';
 import { Brand } from '@/components/layout/brand';
 import { ChatInlineArtifact, ChatLocalFile } from './chat-media';
@@ -55,7 +56,7 @@ export function ChatTranscript({thread, pending,onChoice,onRetryMessage, message
       {thread.messages.map(message => <article id={`chat-message-${message.id}`} className={`chat-message message-${message.role} ${message.files?.length ? 'message-has-files' : ''}`} key={message.id}>
         {message.role === 'assistant' && <div className="assistant-byline"><Brand />{message.sample && <span>คำตอบตัวอย่าง</span>}</div>}
         {!!message.files?.length && <div className="chat-file-attachments">{message.files.map(file => <ChatLocalFile key={file.id} file={file} onOpen={onOpenFile} />)}</div>}
-        {!!message.text && <p>{message.text}</p>}
+        {!!message.text && (message.role==='assistant'?<ChatMarkdown text={message.text}/>:<p>{message.text}</p>)}
         {message.role==='user'&&message.files?.length&&message.delivery!=='sent'&&onRetryMessage&&<button className="chat-resend" disabled={pending} onClick={()=>onRetryMessage(message.text,message.files!)}>ส่งข้อความนี้ให้ AI</button>}
         {!!message.attachments?.length && <div className="message-attachments">{message.attachments.map((name, i) => <span key={i}><Paperclip size={13} />{name}</span>)}<small>แสดงชื่อไฟล์เท่านั้นในต้นแบบนี้</small></div>}
         {message.choices&&<div className="chat-choice-group" aria-label={message.choices.question}><p>{message.choices.question}</p><div>{message.choices.options.map(option=><button key={option.label} disabled={pending} onClick={()=>onChoice?.(`เลือก ${option.label}: ${option.description}`)}><strong>{option.label}</strong><span>{option.description}</span></button>)}</div></div>}

@@ -64,3 +64,7 @@ For current native behavior, [video-harness.md](video-harness.md) supersedes the
 ## Creative controls
 
 Native Settings → AI providers uses a searchable model-management list, grouped by provider with visibility switches. Provider credentials live in config.env; never display them in the model list. Menus use subdued gray hairlines rather than global white border tokens. Contextual choices are light buttons in the conversation; a slash menu sits above the composer without sending on selection. No decorative headings, fixed option count or required approval wizard.
+
+## Assistant response typography
+
+Render assistant Markdown semantically instead of preformatted plain text. Reuse the existing font/column/palette: 14px body, 1.8 line height, moderate 16–18px headings, 14px paragraph rhythm and real list indentation. Shot tables have restrained gray horizontal hairlines without outer cards or grid borders. Tables/code scroll within the answer on narrow panels and mobile. User text remains literal. Saved wording is not rewritten.

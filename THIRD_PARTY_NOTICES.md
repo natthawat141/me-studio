@@ -43,3 +43,7 @@ SOFTWARE.
 The active agent uses the official OpenAI Python SDK (Apache-2.0); source: https://github.com/openai/openai-python. Pinned versions and transitive dependencies are in `python/requirements.lock`. CPython is distributed under the Python Software Foundation license and related included notices. PyInstaller is used to freeze the worker under its GPL terms with the bootloader distribution exception: https://pyinstaller.org/en/stable/license.html.
 
 The build copies installed dependency license/notice files and CPython's complete `LICENSE.txt` into `runtime/python-agent/notices` alongside the frozen executable. These upstream notices do not select a me studio project license. Pi remains for the legacy Meta path and tool-schema compatibility; the active video model/tool loop is Python.
+
+## Markdown rendering
+
+Assistant answers use published MIT-licensed dependencies [react-markdown](https://github.com/remarkjs/react-markdown) 10.1.0 and [remark-gfm](https://github.com/remarkjs/remark-gfm) 4.0.1. Exact package integrity and transitive versions are in package-lock.json. Their original license files are preserved in the distributed dependencies; the desktop build also copies both direct-package licenses into runtime notices. No upstream chat UI or branding is copied.

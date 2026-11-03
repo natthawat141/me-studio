@@ -52,10 +52,10 @@ await writeFile(join(root, 'app/package.json'), JSON.stringify({ name: 'me-studi
 await mkdir(join(runtime, 'notices'), { recursive: true });
 await copyFile('THIRD_PARTY_NOTICES.md', join(runtime, 'notices/THIRD_PARTY_NOTICES.md'));
 await copyFile('src/components/prompt-kit/LICENSE', join(runtime, 'notices/PROMPT-KIT-LICENSE'));
-for (const packagePath of ['@ffmpeg-installer/darwin-arm64', '@ffprobe-installer/darwin-arm64', 'playwright-core']) {
+for (const packagePath of ['@ffmpeg-installer/darwin-arm64', '@ffprobe-installer/darwin-arm64', 'playwright-core', 'react-markdown', 'remark-gfm']) {
   const destination = join(runtime, 'notices', packagePath.replaceAll('/', '-'));
   await mkdir(destination, { recursive: true });
-  for (const filename of ['package.json', 'LICENSE', 'LICENSE.md', 'NOTICE', 'README.md']) {
+  for (const filename of ['package.json', 'LICENSE', 'LICENSE.md', 'license', 'NOTICE', 'README.md']) {
     try { await copyFile(join('node_modules', packagePath, filename), join(destination, filename)); }
     catch (error) { if (error.code !== 'ENOENT') throw error; }
   }
