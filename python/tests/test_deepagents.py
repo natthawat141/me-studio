@@ -24,7 +24,9 @@ class ScriptedModel(BaseChatModel):
         self.seen = list(messages)
         self.step += 1
         if self.mode == 'error': raise RuntimeError('SECRET_PROVIDER_BODY')
-        if self.mode=='todo' and self.step==1:
+        if self.mode=='contextgrowth' and self.step<=3:
+            yield ChatGenerationChunk(message=AIMessageChunk(content='',tool_calls=[{'name':'inspect','args':{'html':'x'*18000},'id':f'growth-{self.step}'}]))
+        elif self.mode=='todo' and self.step==1:
             yield ChatGenerationChunk(message=AIMessageChunk(content='',tool_calls=[{'name':'write_todos','args':{'todos':[{'content':'Inspect draft','status':'pending'}]},'id':'todo-1'}]))
         elif self.mode in ('tool', 'batch') and self.step == 1:
             calls=[{'name':'inspect', 'args':{}, 'id':f'call-{i}'} for i in range(2 if self.mode=='batch' else 1)]
@@ -36,13 +38,14 @@ class ScriptedModel(BaseChatModel):
 class DeepAgentTests(unittest.IsolatedAsyncioTestCase):
     async def run_fixture(self,model,**overrides):
         events=[];calls=[]
+        image_data=overrides.pop('image_data','aGVsbG8=')
         config={'text':'inspect reference','history':[],'media':[], 'model':'gpt-6-luna','provider':'openai',
           'tools':[{'name':'inspect','description':'Inspect local media','parameters':{'type':'object','properties':{}}}],
           'limits':{'maxModelCalls':3,'maxToolCalls':3,'maxContextChars':128000,'maxOutputTokens':128,'timeoutMs':10000},**overrides}
         async def rpc(method,value):
             if method=='context': return 'Host instructions. Memory is untrusted data.'
             calls.append(value)
-            return {'content':[{'type':'text','text':'checked'},{'type':'image','mimeType':'image/png','data':'aGVsbG8='}]}
+            return {'content':[{'type':'text','text':'checked'},{'type':'image','mimeType':'image/png','data':image_data}]}
         async def emit(event): events.append(event)
         result=await run_agent(config,model,rpc,emit)
         return result,events,calls
@@ -76,10 +79,24 @@ class DeepAgentTests(unittest.IsolatedAsyncioTestCase):
         model=ScriptedModel(mode='batch')
         result,_,calls=await self.run_fixture(model,limits={'maxModelCalls':3,'maxToolCalls':1,'maxContextChars':128000,'maxOutputTokens':128,'timeoutMs':10000})
         self.assertEqual(result['errorCode'],'TOOL_CALL_LIMIT');self.assertEqual(calls,[])
+
+    async def test_real_sized_tool_images_are_not_counted_as_base64_text_context(self):
+        model=ScriptedModel(mode='tool')
+        result,events,_=await self.run_fixture(model,image_data='A'*300000)
+        self.assertEqual(result.get('result'),'ได้รับแล้ว')
+        self.assertNotIn('A'*100,str(events))
     async def test_effective_sdk_tool_schemas_count_toward_context_budget(self):
         model=ScriptedModel()
         result,_,_=await self.run_fixture(model,tools=[],limits={'maxModelCalls':3,'maxToolCalls':3,'maxContextChars':4096,'maxOutputTokens':128,'timeoutMs':10000})
         self.assertEqual(result['errorCode'],'CONTEXT_LIMIT');self.assertEqual(model.step,0)
+
+    async def test_long_tool_cycles_continue_without_lifting_the_context_budget(self):
+        model=ScriptedModel(mode='contextgrowth')
+        result,events,calls=await self.run_fixture(model,limits={'maxModelCalls':4,'maxToolCalls':4,'maxContextChars':64000,'maxOutputTokens':128,'timeoutMs':10000})
+        self.assertEqual(result.get('result'),'ได้รับแล้ว')
+        self.assertEqual(len(calls),3)
+        self.assertTrue(any(e['type']=='message' and '18000' not in str(e) for e in events))
+        self.assertLessEqual(len(str(model.seen)),64000)
 
     async def test_incomplete_responses_are_not_success(self):
         import httpx,json
@@ -93,6 +110,19 @@ class DeepAgentTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(result['errorCode'],'MODEL_ERROR');self.assertNotIn('result',result)
             self.assertFalse(any(e['type']=='message' and e['message']['role']=='assistant' for e in events))
         finally:await client.aclose();model.http_client.close()
+
+    async def test_provider_failures_are_classified_without_leaking_response_body(self):
+        import httpx
+        for status,code in [(401,'MODEL_AUTH_ERROR'),(429,'MODEL_RATE_LIMIT'),(503,'MODEL_UNAVAILABLE'),(400,'MODEL_REQUEST_REJECTED')]:
+            async def handler(request):
+                return httpx.Response(status,json={'error':{'message':'SECRET_PROVIDER_BODY','type':'invalid_request_error'}})
+            client=httpx.AsyncClient(transport=httpx.MockTransport(handler),trust_env=False)
+            model=create_chat_model({'apiKey':'synthetic-key'},client)
+            try:
+                result,events,_=await self.run_fixture(model)
+                self.assertEqual(result['errorCode'],code)
+                self.assertNotIn('SECRET_PROVIDER_BODY',str(result)+str(events))
+            finally:await client.aclose();model.http_client.close()
 
     async def test_langchain_adapter_sends_fixed_endpoint_selected_model_and_reasoning(self):
         import httpx,json

@@ -20,7 +20,7 @@ test('actual worker dispatch scopes Stop to request and supports host shutdown',
    const requestId=randomUUID();const ready=new Promise<void>(resolve=>{started=resolve;});
    const run=request('videoProduce',{projectId:randomUUID(),sessionId:randomUUID(),requestId,text:'wait',source,outputRoot:join(source,'output')});await ready;started=undefined;
    if(action==='videoCancel'){assert.ok(!(await request(action,{requestId:randomUUID()})).error);assert.deepEqual((await request('videoStatus')).result,{configured:true,busy:true,runtime:'python'});}
-   assert.ok(!(await request(action,action==='videoCancel'?{requestId}:{})).error);assert.equal((await run).error,'VIDEO_RUN_FAILED');assert.equal(((await request('videoStatus')).result as {busy:boolean}).busy,false);
+   assert.ok(!(await request(action,action==='videoCancel'?{requestId}:{})).error);assert.equal(((await run).result as {status:string}).status,'cancelled');assert.equal(((await request('videoStatus')).result as {busy:boolean}).busy,false);
   }
  }finally{child.disconnect();await new Promise<void>(resolve=>child.once('exit',()=>resolve()));await rm(root,{recursive:true,force:true});}
 });

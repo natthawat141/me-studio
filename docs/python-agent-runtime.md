@@ -74,7 +74,7 @@ The graph has an in-memory StateBackend with scratch filesystem tools and write_
 
 `STUDIO_REASONING_EFFORT=auto|low|medium|high` is persisted in private config.env through a narrow native method. Auto omits reasoning settings; OpenAI/OpenRouter explicit effort is forwarded without silently changing it. Meta uses Auto until its effort contract is verified. Model support and provider entitlement remain provider-dependent. Non-Auto effort participates in request identity, while Auto preserves existing replay fingerprints.
 
-Production events carry sessionId and requestId. The UI streams partial Markdown into the current assistant message, replaces it with the final result, and ignores late events/results after Stop. Stop is request-scoped. Host shutdown is a separate worker-only action. Provider incomplete/failed responses, invalid tool calls and empty final answers fail explicitly; partial streamed text remains visible with a failure state.
+Production events carry sessionId and requestId. The UI streams partial Markdown into the current assistant message, replaces it with the final result, and ignores late events after Stop. A late final response may attach verified saved files (deduplicated, at most 10) to the original stopped message only; it cannot open a panel or modify a newer run. Stop is request-scoped. Host shutdown is a separate worker-only action. Provider incomplete/failed responses, invalid tool calls and empty final answers fail explicitly; partial streamed text remains visible with a failure state.
 
 ## Project assets and visual inspection
 
@@ -87,3 +87,13 @@ inspect_animation returns three labelled images at the beginning, midpoint and e
 Research/Tavily and expanded creative skills remain the next slice. Audio/video semantic understanding, arbitrary JS/Python execution, general browser automation, long-term SDK scratch memory and a durable job queue are not introduced by this migration.
 
 Primary SDK references: [Deep Agents customization](https://docs.langchain.com/oss/python/deepagents/customization), [backends](https://docs.langchain.com/oss/python/deepagents/backends), [models](https://docs.langchain.com/oss/python/deepagents/models), [streaming](https://docs.langchain.com/oss/python/deepagents/streaming). Exact installed contracts are tested offline, including SDK Command results and Responses incomplete status.
+
+## Stability recovery (0.2.1)
+
+`context.py` measures model-bound messages and tool schemas, excluding response diagnostics, duplicate Responses function-call representations and separately bounded image bytes. Before a model call it retires complete older dialogue turns, then complete older tool cycles when necessary, while retaining the current user request, newest tool exchange and pending calls. Durable transcripts/files are unchanged. If those retained inputs alone exceed the fixed budget, the request still fails with CONTEXT_LIMIT; there is no hidden summarization call or budget increase.
+
+Native production returns an explicit completed/failed/cancelled outcome together with successful saved files and any actual rendered artifact. Provider authorization, throttling and availability errors use fixed safe codes; provider bodies/credentials never enter UI error messages. The UI clears active indicators on failure/Stop and preserves partial output. Normal retry is user-triggered. A worker crash can still interrupt a run; this release does not add crash recovery or a durable queue.
+
+When write_project_file saves HTML referencing registered content-addressed assets, the host verifies and materializes only those assets beside the HTML. Existing differing bytes and symlinks are refused. Supported HTML can therefore be captured/opened from the Project source with its verified dependencies, rather than referencing a missing render-only asset folder. Arbitrary external or disk image paths remain unavailable.
+
+See [stability evidence](plans/2026-11-04-runtime-stability.md) for the actual live Meta and packaged-release checks; paid generation quality and user creative acceptance remain separate.

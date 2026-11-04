@@ -18,7 +18,7 @@ export interface WorkspaceFilesBridge {
   chatFile?(input:{id:string;projectId?:string}):Promise<WorkspacePreview>;
   videoStatus?():Promise<{configured:boolean;busy:boolean}>;
   loadVideoKeys?():Promise<{configured:boolean}|null>;
-  produceVideo?(input:{projectId?:string;sessionId:string;requestId:string;text:string;attachments?:{id:string}[];provider?:NativeSelection["provider"];model?:string}):Promise<{text:string;projectId?:string;files?:ChatFileRef[];openFile?:ChatFileRef;choices?:{question:string;options:{label:string;description:string}[]};artifact?:{id:string;title:string;url:string;hasVoice:boolean;files?:ChatFileRef[]}}>;
+  produceVideo?(input:{projectId?:string;sessionId:string;requestId:string;text:string;attachments?:{id:string}[];provider?:NativeSelection["provider"];model?:string}):Promise<{status?:'completed'|'failed'|'cancelled';errorCode?:string;text:string;projectId?:string;files?:ChatFileRef[];openFile?:ChatFileRef;choices?:{question:string;options:{label:string;description:string}[]};artifact?:{id:string;title:string;url:string;hasVoice:boolean;files?:ChatFileRef[]}}>;
   cancelVideo?(input?:{requestId:string}):Promise<unknown>;
   saveVideo?(input:{id:string;projectId:string}):Promise<{saved:boolean}>;
   videoArtifact?(input:{id:string;projectId:string}):Promise<{id:string;title:string;url:string;files?:ChatFileRef[]}>;

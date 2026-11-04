@@ -2,6 +2,7 @@
 import asyncio
 import json
 import time
+import openai
 from deepagents import create_deep_agent
 from deepagents.backends import StateBackend
 from deepagents.middleware.filesystem import FilesystemMiddleware
@@ -11,6 +12,7 @@ from langchain_core.tools import StructuredTool
 from langgraph.types import Command
 from langchain_core.utils.function_calling import convert_to_openai_tool
 from models import OpenAIProvider
+from context import fit_context
 
 class AgentFailure(Exception): pass
 
@@ -35,6 +37,7 @@ def history_input(messages):
     return result
 
 def bounded_text(value):
+    if isinstance(value,dict) and value.get('type')=='image' and 'data' in value:return {'type':'text','text':'[bounded image]'}
     if isinstance(value,str): return '[bounded image]' if value.startswith('data:image/') else value
     if isinstance(value,list): return [bounded_text(v) for v in value]
     if isinstance(value,dict): return {k:bounded_text(v) for k,v in value.items()}
@@ -66,10 +69,10 @@ async def run_agent(config,provider,rpc,emit):
         base=request.system_message.content if request.system_message else ''
         if not isinstance(base,str): base=json_text(base)
         system=SystemMessage(content=base+'\nTrusted host context:\n'+context)
-        size=len(json_text(bounded_text({'system':system.content,'messages':[m.model_dump(mode='json') for m in request.messages],'tools':[convert_to_openai_tool(t) for t in request.tools]})))
-        if size>limits['maxContextChars']: raise AgentFailure('CONTEXT_LIMIT')
+        try: messages=fit_context(system.content,request.messages,[convert_to_openai_tool(t) for t in request.tools],limits['maxContextChars'])
+        except ValueError: raise AgentFailure('CONTEXT_LIMIT')
         usage['modelCalls']+=1;await emit({'type':'usage','usage':dict(usage)})
-        response=await handler(request.override(system_message=system))
+        response=await handler(request.override(system_message=system,messages=messages))
         for m in response.result:
             if isinstance(m,AIMessage) and (m.response_metadata.get('status') in ('incomplete','failed','cancelled') or m.invalid_tool_calls):
                 raise AgentFailure('MODEL_ERROR')
@@ -128,4 +131,10 @@ async def run_agent(config,provider,rpc,emit):
         return {'result':final.text, 'usage':usage}
     except TimeoutError: return {'errorCode':'TIMEOUT','usage':usage}
     except AgentFailure as error: return {'errorCode':str(error),'usage':usage}
+    except openai.APITimeoutError: return {'errorCode':'TIMEOUT','usage':usage}
+    except openai.APIStatusError as error:
+        status=error.status_code
+        code='MODEL_AUTH_ERROR' if status in (401,403) else 'MODEL_RATE_LIMIT' if status==429 else 'MODEL_UNAVAILABLE' if status>=500 else 'MODEL_REQUEST_REJECTED'
+        return {'errorCode':code,'usage':usage}
+    except openai.APIConnectionError: return {'errorCode':'MODEL_UNAVAILABLE','usage':usage}
     except Exception: return {'errorCode':'MODEL_ERROR','usage':usage}

@@ -5,7 +5,7 @@ import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFile, copyFile, mkdir, stat } from 'node:fs/promises';
 import { startRuntime } from './runtime.mjs';
-import { APP_ORIGIN, trustedSender, runtimeEnvironment } from './policy.mjs';
+import { APP_ORIGIN, trustedSender, runtimeEnvironment, fileOperationError } from './policy.mjs';
 import { WorkspaceFiles } from './workspace-files.mjs';
 import {ProjectEdits} from './project-edits.mjs';
 import { ProjectFolders } from './project-folders.mjs';
@@ -198,8 +198,7 @@ else {
         if (!['list','open'].includes(method)||!input||typeof input.id!=='string'||!/^[a-f0-9-]{36}$/.test(input.id)) throw new Error('INVALID_FILE');
         return {ok:true,value:method==='list'?await workspaceFiles.list(input.id):await workspaceFiles.preview(input.id)};
       } catch(error) {
-        const safe=['PROJECT_BUSY','PROJECT_CONFLICT','INVALID_EDIT','FOLDER_BUSY','VIDEO_BUSY','INVALID_FILE','INVALID_FOLDER','FILE_OUTSIDE_FOLDER','FILE_TOO_LARGE','FOLDER_LIMIT','INVALID_PROJECT','INVALID_REGISTRY','DUPLICATE_FOLDER','INVALID_CONFIG','INVALID_DEFAULT_MODEL','CONFIG_OPEN_FAILED','MODEL_NOT_AVAILABLE','ATTACHMENT_LIMIT','INVALID_IMAGE'];
-        return {ok:false,error:safe.includes(error.message)?error.message:'FILE_READ_FAILED'};
+        return {ok:false,error:fileOperationError(error)};
       }
     });
     window = new BrowserWindow({ width: 1440, height: 940, minWidth: 980, minHeight: 720, title: 'me studio', backgroundColor: '#00000000', titleBarStyle: 'hiddenInset', vibrancy: 'sidebar', visualEffectState: 'active',

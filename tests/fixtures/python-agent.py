@@ -28,7 +28,9 @@ class ScriptedProvider:
             images = [p for p in user if p.get("type") == "input_image" and p.get("image_url", "").startswith("data:image/")]
             texts = [p for p in user if p.get("type") == "input_text"]
             output = [text(f"received {len(images)} images and {len(texts)} text parts")]
-        elif user == "provider_error":
+        elif user == "partial_failure" and self.step==1:
+            output=[call('write_project_file',{'path':'preview.html','text':'<main>Saved before failure</main>'})]
+        elif user in ("provider_error","partial_failure"):
             raise RuntimeError("SECRET_PROVIDER_BODY sk-never-forward-this-secret")
         elif user == "prior":
             output = [text("legacy restored" if any(m.get("content") == "legacy answer" for m in messages) and "Milo" in system else "missing")]

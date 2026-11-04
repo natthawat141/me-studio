@@ -56,6 +56,13 @@ export async function createProductionWorkspace(options:{source:string;storage:s
   async readText(path:string){if(!allowedText.test(path))throw Error('PROJECT_PATH_DENIED');const file=await checked(path);if(!(await lstat(file)).isFile()||(await lstat(file)).size>64000)throw Error('FILE_TOO_LARGE');return readFile(file,'utf8');},
   async writeText(path:string,text:string){
    if(!allowedText.test(path)||typeof text!=='string'||Buffer.byteLength(text)>64000)throw Error('PROJECT_PATH_DENIED');const file=await checked(path,true);
+   // Registered image src values must remain usable when a draft is written as a Project HTML file.
+   if(/\.html?$/i.test(path))for(const match of text.matchAll(/\bsrc\s*=\s*['"](assets\/asset-[a-f0-9]{64}\.(?:png|jpg|webp))['"]/g)){
+    const asset=assets.find(a=>a.src===match[1]);if(!asset)throw Error('INVALID_IMAGE');
+    const bytes=await assetBytes(asset),target=await checked([dirname(path)==='.'?'':dirname(path),asset.src].filter(Boolean).join('/'),true);
+    try{const existing=await readFile(target);if(!existing.equals(bytes))throw Error('ASSET_CHANGED');}
+    catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;await writeFile(target,bytes,{flag:'wx',mode:0o600});}
+   }
    let prior:string|undefined;try{if((await lstat(file)).size>64000)throw Error('FILE_TOO_LARGE');prior=await readFile(file,'utf8');}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}
    if(prior!==undefined){const history=join(storage,'history');await mkdir(history,{recursive:true});if(await realpath(history)!==history)throw Error('PROJECT_PATH_DENIED');await writeFile(join(history,randomUUID()+'.json'),JSON.stringify({path,text:prior}),{flag:'wx',mode:0o600});}
    const temporary=join(dirname(file),'.me-studio-write-'+randomUUID());try{await writeFile(temporary,text,{flag:'wx',mode:0o600});await checked(path,true);await rename(temporary,file);}finally{await rm(temporary,{force:true});}return {written:true,path,previousVersionSaved:prior!==undefined};

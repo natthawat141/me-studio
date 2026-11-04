@@ -28,3 +28,13 @@ test('uploaded references get stable assets and cannot redirect through a replac
   await assert.rejects(again.imageInputs());
  }finally{await rm(root,{recursive:true,force:true});}
 });
+test('writing HTML with registered assets materializes portable scoped dependencies without overwriting existing assets',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'studio-portable-'));try{
+  const w=await createProductionWorkspace({source:root,storage:join(root,'.state')});
+  await w.addReferences([{name:'reference.png',dataUrl:'data:image/png;base64,'+pixel}]);const asset=w.assets()[0];
+  await w.writeText('previews/preview.html',`<img src="${asset.src}">`);
+  assert.equal((await readFile(join(root,'previews',asset.src))).toString('base64'),pixel);
+  await rm(join(root,'previews',asset.src));await symlink(join(root,'.state',asset.id),join(root,'previews',asset.src));
+  await assert.rejects(w.writeText('previews/preview.html',`<img src="${asset.src}">`),/PROJECT_PATH_DENIED/);
+ }finally{await rm(root,{recursive:true,force:true});}
+});

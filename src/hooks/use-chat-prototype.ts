@@ -1,4 +1,5 @@
 'use client';
+import {productionFailureText} from '@/lib/production-errors';
 import {reduceActivity,activityLabel,type Activity} from '@/lib/production-activity';
 
 
@@ -16,6 +17,7 @@ export function useChatPrototype() {
   const [storageError, setStorageError] = useState('');
   const [pendingId, setPendingId] = useState<string>();
   const resultRequest=useRef('');
+  const stoppedRequests=useRef(new Set<string>());
   const nativeRequest=useRef<{requestId:string;sessionId:string;assistantId:string;userId:string;streamed:string}|undefined>(undefined);
   const [activities,setActivities]=useState<Record<string,Activity[]>>({});
   const [completion,setCompletion]=useState<{sessionId:string;requestId:string;file?:ChatFileRef}>();
@@ -97,15 +99,25 @@ export function useChatPrototype() {
     const references=files.length?files:[...active.messages].reverse().find(m=>m.role==='user'&&m.files?.length)?.files??[];
     setState(s=>{const next=commitChatMessage(s,active,{id:userMessageId,role:'user',text,delivery:'sent',...(files.length?{files}:{})});return textOverride?{...next,threads:next.threads.map(t=>t.id===id?{...t,draft:active.draft}:t)}:next;});
     void window.meStudioFiles.produceVideo({projectId,sessionId:id,requestId,text,attachments:references.map(f=>({id:f.id})),...selection}).then(result=>{
+      if(stoppedRequests.current.has(requestId)){
+        // Only attach verified saved files to this cancelled request. Never open a panel or touch a newer run.
+        const savedFiles=[...new Map([...(result.files??[]),...(result.artifact?.files??[])].map(file=>[file.id,file])).values()].slice(-10);
+        if(savedFiles.length)setState(s=>({...s,threads:s.threads.map(t=>t.id===id?{...t,messages:t.messages.map(m=>m.id===assistantId?{...m,files:savedFiles}:m)}:t)}));
+        return;
+      }
       if(nativeRequest.current?.requestId!==requestId)return;
+      const failed=result.status==='failed'||result.status==='cancelled';
+      const answer=result.text||nativeRequest.current.streamed;
+      if(failed)setActivities(s=>({...s,[id]:(s[id]??[]).map(a=>a.status==='started'?{...a,status:result.status==='cancelled'?'cancelled':'failed'}:a)}));
       setCompletion({sessionId:id,requestId,...(visibleId.current===id&&result.openFile?{file:result.openFile}:{})});
-      const message={id:assistantId,role:'assistant' as const,text:result.text.slice(0,100000),...(result.files?.length?{files:result.files}:{}),...(result.choices?{choices:result.choices}:{}),...(result.artifact?{artifacts:[{id:result.artifact.id,title:result.artifact.title,kind:'video' as const,src:result.artifact.url,poster:'' as const,nativeProjectId:result.projectId??projectId,files:result.artifact.files}]}:{})};
+      const message={id:assistantId,role:'assistant' as const,text:(answer+(failed?'\n\n'+productionFailureText(result.errorCode):'')).slice(0,100000),...(result.files?.length?{files:result.files}:{}),...(result.choices?{choices:result.choices}:{}),...(result.artifact?{artifacts:[{id:result.artifact.id,title:result.artifact.title,kind:'video' as const,src:result.artifact.url,poster:'' as const,nativeProjectId:result.projectId??projectId,files:result.artifact.files}]}:{})};
       setState(s=>({...s,threads:s.threads.map(t=>t.id===id?{...t,unread:visibleId.current!==id,messages:t.messages.some(m=>m.id===assistantId)?t.messages.map(m=>m.id===assistantId?message:m):[...t.messages,message]}:t)}));
-    }).catch(()=>{
+    }).catch(error=>{
       if(nativeRequest.current?.requestId!==requestId)return;
+      setActivities(s=>({...s,[id]:(s[id]??[]).map(a=>a.status==='started'?{...a,status:'failed'}:a)}));
       const partial=nativeRequest.current.streamed;
-      setState(s=>({...s,threads:s.threads.map(t=>t.id===id?{...t,messages:[...t.messages.filter(m=>m.id!==assistantId).map(m=>m.id===userMessageId?{...m,delivery:'failed' as const}:m),{id:assistantId,role:'assistant',text:(partial?partial+'\n\n':'')+'การทำงานไม่สำเร็จ กรุณาตรวจการเชื่อมต่อ AI และลองใหม่'}]}:t)}));
-    }).finally(()=>{if(nativeRequest.current?.requestId===requestId){nativeRequest.current=undefined;setPendingId(undefined);setProductionStage(undefined);}});return true;
+      setState(s=>({...s,threads:s.threads.map(t=>t.id===id?{...t,messages:[...t.messages.filter(m=>m.id!==assistantId).map(m=>m.id===userMessageId?{...m,delivery:'failed' as const}:m),{id:assistantId,role:'assistant',text:(partial?partial+'\n\n':'')+productionFailureText(error)}]}:t)}));
+    }).finally(()=>{stoppedRequests.current.delete(requestId);if(nativeRequest.current?.requestId===requestId){nativeRequest.current=undefined;setPendingId(undefined);setProductionStage(undefined);}});return true;
   }
 
   function attach(files:ChatFileRef[]){
@@ -116,7 +128,7 @@ export function useChatPrototype() {
   function stop() {
     resultRequest.current='';
     const request=nativeRequest.current;nativeRequest.current=undefined;
-    if(request){setActivities(s=>({...s,[request.sessionId]:(s[request.sessionId]??[]).map(a=>a.status==='started'?{...a,status:'cancelled'}:a)}));void window.meStudioFiles?.cancelVideo?.({requestId:request.requestId});setState(s=>({...s,threads:s.threads.map(t=>t.id===request.sessionId?{...t,messages:t.messages.map(m=>m.id===request.assistantId?{...m,text:m.text+'\n\nหยุดแล้ว'}:m)}:t)}));}
+    if(request){stoppedRequests.current.add(request.requestId);if(stoppedRequests.current.size>20)stoppedRequests.current.delete(stoppedRequests.current.values().next().value!);setActivities(s=>({...s,[request.sessionId]:(s[request.sessionId]??[]).map(a=>a.status==='started'?{...a,status:'cancelled'}:a)}));void window.meStudioFiles?.cancelVideo?.({requestId:request.requestId}).catch(()=>{});setState(s=>({...s,threads:s.threads.map(t=>t.id===request.sessionId?{...t,messages:t.messages.some(m=>m.id===request.assistantId)?t.messages.map(m=>m.id===request.assistantId?{...m,text:m.text+'\n\nหยุดแล้ว'}:m):[...t.messages,{id:request.assistantId,role:'assistant',text:'หยุดแล้ว'}]}:t)}));}
     if(timer.current)clearTimeout(timer.current);timer.current=null;setPendingId(undefined);setProductionStage(undefined);
   }
 
