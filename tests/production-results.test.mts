@@ -11,7 +11,8 @@ test('HTML creation publishes actual files; capture leaves the creative draft in
  await writeFile(join(root,'other.html'),'<p>Different file</p>');await p.tools.find(t=>t.name==='capture_project_html')!.execute('capture',{path:'other.html',width:320,height:320});
  const current=await p.tools.find(t=>t.name==='read_current_animation')!.execute('read',{});assert.match(JSON.stringify(current),/keep voice text/);
  assert.ok(p.resultFiles().some(f=>f.path.endsWith('.png')));assert.equal(await readFile(join(root,'other.html'),'utf8'),'<p>Different file</p>');
- assert.ok(events.some((e)=>e.status==='completed'&&e.action==='write'));assert.ok(!JSON.stringify(events).includes('keep voice text'));
+ assert.ok(events.some((e)=>e.status==='completed'&&e.action==='write'));
+ assert.ok(JSON.stringify(events).includes('design-1.html'));assert.ok(!JSON.stringify(events).includes('keep voice text'));
  await assert.rejects(p.tools.find(t=>t.name==='write_project_file')!.execute('bad',{path:'../escape.html',text:'secret'}));assert.ok(events.some((e)=>e.status==='failed'));
  }finally{await rm(root,{recursive:true,force:true});}
 });
