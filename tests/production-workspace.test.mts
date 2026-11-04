@@ -12,7 +12,12 @@ test('project tools preserve previous text and reject hidden, instruction, symli
   assert.equal(await w.readText('story.md'),'original');await w.writeText('story.md','revised');assert.equal(await w.readText('story.md'),'revised');
   assert.equal((await w.list('')).entries.some(e=>e.name==='config.env'),false);
   assert.equal((await w.history())[0].text,'original');
-  for(const path of ['../outside.md','/tmp/outside.md','.env','config.env','AGENTS.md','node_modules/a.md'])await assert.rejects(w.readText(path));
+  for(const path of ['../outside.md','/tmp/outside.md','.env','config.env','AGENTS.md','node_modules/a.md']){
+   await assert.rejects(w.readText(path));
+   await assert.rejects(w.writeText(path,'unauthorized repair'));
+  }
+  for(const path of ['package.json','desktop/main.mjs','python/runtime.py','nested/config.env'])await assert.rejects(w.writeText(path,'unauthorized repair'));
+  assert.equal(await readFile(join(source,'config.env'),'utf8'),'secret');
   await symlink(join(root,'state'),join(source,'escaped'));await assert.rejects(w.writeText('escaped/file.md','bad'));
   assert.equal(await readFile(join(source,'AGENTS.md'),'utf8'),'instructions');
  }finally{await rm(root,{recursive:true,force:true});}

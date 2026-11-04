@@ -24,6 +24,14 @@ class HostContextBudget(AgentMiddleware):
     @property
     def name(self): return 'SummarizationMiddleware'
 
+class NoPlanning(AgentMiddleware):
+    @property
+    def name(self): return 'TodoListMiddleware'
+
+class NoScratchFilesystem(AgentMiddleware):
+    @property
+    def name(self): return 'FilesystemMiddleware'
+
 
 def json_text(value): return json.dumps(value,ensure_ascii=False,separators=(',',':'))
 
@@ -68,7 +76,12 @@ async def run_agent(config,provider,rpc,emit):
         context=await rpc('context',{})
         base=request.system_message.content if request.system_message else ''
         if not isinstance(base,str): base=json_text(base)
-        system=SystemMessage(content=base+'\nTrusted host context:\n'+context)
+        remaining=limits['maxModelCalls']-usage['modelCalls']
+        budget_note=f"\nHost execution budget: {remaining} model calls including this one, {limits['maxToolCalls']-usage['toolCalls']} tool calls remaining. Stay within the existing budget."
+        if config.get('toolProfile')=='creative':
+            budget_note+=' Use only the real host Project/media tools. Save/render tools include inspection images; do not repeat unchanged inspections or reread the same draft. Deliver the user-requested output before optional polishing.'
+            if remaining<=4: budget_note+=' Budget is nearly exhausted: prioritize finishing the already requested deliverable and a concise truthful response. Do not start a redesign or optional research.'
+        system=SystemMessage(content=base+'\nTrusted host context:\n'+context+budget_note)
         try: messages=fit_context(system.content,request.messages,[convert_to_openai_tool(t) for t in request.tools],limits['maxContextChars'])
         except ValueError: raise AgentFailure('CONTEXT_LIMIT')
         usage['modelCalls']+=1;await emit({'type':'usage','usage':dict(usage)})
@@ -117,8 +130,9 @@ async def run_agent(config,provider,rpc,emit):
     messages.append(HumanMessage(content=parts if len(parts)>1 else config['text']))
     await event_message('user',config['text'])
     try:
+        creative=config.get('toolProfile')=='creative'
         graph=create_deep_agent(model=model,tools=tools,backend=StateBackend(),middleware=[
-            FilesystemMiddleware(backend=StateBackend(),tools=['ls','read_file','write_file','edit_file','glob','grep']),NoDelegation(),HostContextBudget(),TodoListMiddleware(),budget,host_tools])
+            NoScratchFilesystem() if creative else FilesystemMiddleware(backend=StateBackend(),tools=['ls','read_file','write_file','edit_file','glob','grep']),NoDelegation(),HostContextBudget(),NoPlanning() if creative else TodoListMiddleware(),budget,host_tools])
         last={}
         async with asyncio.timeout(limits['timeoutMs']/1000):
             async for mode,chunk in graph.astream({'messages':messages},config={'recursion_limit':limits['maxModelCalls']*4+8},stream_mode=['messages','values']):

@@ -64,6 +64,15 @@ class DeepAgentTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(any(isinstance(m,ToolMessage) and m.name=='write_todos' for m in model.seen))
         self.assertTrue(any(e['type']=='tool_end' for e in events))
 
+    async def test_creative_profile_exposes_only_host_tools_and_remaining_budget(self):
+        model=ScriptedModel(mode='tool')
+        result,_,calls=await self.run_fixture(model,toolProfile='creative')
+        self.assertEqual(result.get('result'),'ได้รับแล้ว')
+        self.assertEqual([t.name for t in model.bound],['inspect'])
+        self.assertEqual(len(calls),1)
+        self.assertIn('2 model calls including this one',str(model.seen))
+        self.assertIn('nearly exhausted',str(model.seen))
+
     async def test_tool_images_reach_next_model_without_transcript_bytes(self):
         model=ScriptedModel(mode='tool')
         result,events,calls=await self.run_fixture(model)

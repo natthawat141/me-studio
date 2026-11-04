@@ -120,7 +120,9 @@ export async function renderProject(manifestPath, { outputRoot = resolve('.studi
       if (encoderStopped) await encoderDone;
       await page.evaluate((ms) => window.seek(ms), frame * 1000 / manifest.fps);
       if (scriptFailure || resourceFailure) throw new Error('Animation or asset failed while seeking. Review the project snapshot');
-      const png = await page.screenshot({ type: 'png', animations: 'disabled', timeout: 15_000 });
+      // window.seek owns the frame time. Disabling animations here would finish
+      // finite CSS animations and cancel infinite ones before taking the frame.
+      const png = await page.screenshot({ type: 'png', animations: 'allow', timeout: 15_000 });
       if (frame === 0) await writeFile(join(job.directory, 'poster.png'), png);
       await new Promise((resolve, reject) => encoder.stdin.write(png, (error) => error ? reject(error) : resolve()));
       const now = performance.now();

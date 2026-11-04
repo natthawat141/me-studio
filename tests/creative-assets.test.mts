@@ -20,6 +20,7 @@ test('real image assets survive draft inspection, MP4 inspection and bounded ver
  const pixel=join(root,'pixel.rgb');await runTool(ffmpeg,['-hide_banner','-loglevel','error','-i',paths[0],'-frames:v','1','-vf','scale=1:1','-pix_fmt','rgb24','-f','rawvideo','-y',pixel]);const rgb=await readFile(pixel);assert.ok(rgb[0]>220&&rgb[1]<30&&rgb[2]<30,'Original red reference must be visible in actual MP4');
  assert.equal(new Set(paths).size,3);for(const path of paths)await readFile(path);
  const actual=await p.inspect();assert.match(actual.content[0].type==='text'?actual.content[0].text:'',/rendered-mp4/);assert.equal(actual.content.filter(p=>p.type==='image').length,3);
+ const listed=await p.tools.find(t=>t.name==='list_generated_files')!.execute('list',{kind:'video'});assert.equal(JSON.parse((listed.content[0] as {text:string}).text).files.length,3);
  await assert.rejects(p.render(false),/RENDER_ATTEMPT_LIMIT/);assert.equal(p.artifact()?.path,paths[2]);
  const abort=new AbortController();abort.abort();const cancelled=await createProductionTools({source:root,outputRoot:join(root,'output'),skillRoot,toolPaths:{ffmpeg,ffprobe,browser},signal:abort.signal});await assert.rejects(cancelled.saveHtml(draft));
  }finally{await rm(root,{recursive:true,force:true});}
