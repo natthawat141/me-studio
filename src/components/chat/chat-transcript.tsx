@@ -1,6 +1,7 @@
 'use client';
 
 import { useLayoutEffect, useRef } from 'react';
+import {activityLabel,type Activity} from '@/lib/production-activity';
 import {ChatMarkdown} from './chat-markdown';
 import { Paperclip } from 'lucide-react';
 import { Brand } from '@/components/layout/brand';
@@ -12,14 +13,14 @@ type Props = {
   onRetryMessage?:(text:string,files:ChatFileRef[])=>void;
   onChoice?:(text:string)=>void;
   thread: ChatThread;
-  pending: boolean;stage?:string;
+  pending: boolean;stage?:string;activities?:Activity[];
   messageId?: string;
   onOpenFile: (file: WorkspacePreview, trigger: HTMLButtonElement) => void;
   onOpenArtifact: (artifact: ChatArtifact, trigger: HTMLButtonElement) => void;
 };
 
 /** Only the message column changes identity; the viewport and composer stay mounted. */
-export function ChatTranscript({thread, pending,stage,onChoice,onRetryMessage, messageId, onOpenFile, onOpenArtifact}: Props) {
+export function ChatTranscript({thread, pending,stage,activities,onChoice,onRetryMessage, messageId, onOpenFile, onOpenArtifact}: Props) {
   const viewport = useRef<HTMLDivElement>(null);
   const column = useRef<HTMLDivElement>(null);
   const current = useRef<string | undefined>(undefined);
@@ -62,6 +63,7 @@ export function ChatTranscript({thread, pending,stage,onChoice,onRetryMessage, m
         {message.choices&&<div className="chat-choice-group" aria-label={message.choices.question}><p>{message.choices.question}</p><div>{message.choices.options.map(option=><button key={option.label} disabled={pending} onClick={()=>onChoice?.(`เลือก ${option.label}: ${option.description}`)}><strong>{option.label}</strong><span>{option.description}</span></button>)}</div></div>}
         {!!message.artifacts?.length && <div className="chat-artifacts">{message.artifacts.map(item => <ChatInlineArtifact key={item.id} item={item} onOpenFile={onOpenFile} onOpen={onOpenArtifact} />)}</div>}
       </article>)}
+      {!!activities?.length&&<details className="chat-activity"><summary>{pending?'การทำงาน':'ขั้นตอนการทำงาน'} · {activities.length}</summary><ol>{activities.map(a=><li key={a.operationId}><span>{activityLabel(a)}</span><small>{a.status==='started'?'กำลังทำ':a.status==='completed'?'เสร็จแล้ว':a.status==='cancelled'?'หยุดแล้ว':'ไม่สำเร็จ'}</small></li>)}</ol></details>}
       {pending && <p className="chat-thinking" role="status" aria-label="กำลังคิด…"><span aria-hidden="true">{stage||'กำลังคิด'}</span><span className="thinking-dots" aria-hidden="true"><i/><i/><i/></span></p>}
     </div>
   </div>;

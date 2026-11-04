@@ -84,3 +84,5 @@ html[data-studio-theme="dark"] .project-info-detail+.project-info-detail { borde
 html[data-studio-theme="dark"] .composer-commands { background:#272729; color:#e1e1e3; box-shadow:0 8px 26px #0003; }
 html[data-studio-theme="dark"] .model-visibility-list { background:#ffffff04; }
 html[data-studio-theme="dark"] .models-search { color:#d1d1d3; }
+
+html[data-studio-theme="dark"] .chat-delete-actions button:last-child {background:#a6403b;color:#fff;}

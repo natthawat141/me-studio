@@ -5,6 +5,8 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { chromium } from 'playwright-core';
 
+const appPackage=JSON.parse(await readFile('package.json','utf8'));
+const sourceRevision=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
 const root = resolve('.studio/desktop-build');
 const runtime = join(root, 'runtime');
 await mkdir(join(runtime, 'desktop'), { recursive: true });
@@ -48,7 +50,7 @@ await copyFile(join(unpack, `node-v${nodeVersion}-darwin-arm64/bin/node`), join(
 await chmod(join(runtime, 'bin/node'), 0o755);
 if (execFileSync(join(runtime, 'bin/node'), ['--version'], { encoding: 'utf8' }).trim() !== `v${nodeVersion}`) throw new Error('NODE_VERSION_FAILED');
 await cp('dist-desktop', join(root, 'app'), { recursive: true });
-await writeFile(join(root, 'app/package.json'), JSON.stringify({ name: 'me-studio-desktop', version: '0.1.0', description: 'Local cartoon studio', author: 'me studio', main: 'main.mjs', type: 'module' }, null, 2));
+await writeFile(join(root, 'app/package.json'), JSON.stringify({ name: 'me-studio-desktop', version: appPackage.version, description: 'Local cartoon studio', author: 'me studio', main: 'main.mjs', type: 'module' }, null, 2));
 await mkdir(join(runtime, 'notices'), { recursive: true });
 await copyFile('THIRD_PARTY_NOTICES.md', join(runtime, 'notices/THIRD_PARTY_NOTICES.md'));
 await copyFile('src/components/prompt-kit/LICENSE', join(runtime, 'notices/PROMPT-KIT-LICENSE'));
@@ -60,5 +62,5 @@ for (const packagePath of ['@ffmpeg-installer/darwin-arm64', '@ffprobe-installer
     catch (error) { if (error.code !== 'ENOENT') throw error; }
   }
 }
-await writeFile(join(runtime, 'runtime.json'), JSON.stringify({ agent: 'python', agentProtocol: 1, node: nodeVersion, nodeArchiveSha256: digest, browser: basename(dirname(browserRoot)), target: 'darwin-arm64', builtAt: new Date().toISOString() }, null, 2));
+await writeFile(join(runtime, 'runtime.json'), JSON.stringify({ version:appPackage.version,sourceRevision,agent: 'python', agentProtocol: 1, node: nodeVersion, nodeArchiveSha256: digest, browser: basename(dirname(browserRoot)), target: 'darwin-arm64', builtAt: new Date().toISOString() }, null, 2));
 console.log(`Desktop resources staged: ${runtime}`);

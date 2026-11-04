@@ -7,15 +7,18 @@ import { readFile, copyFile, mkdir, stat } from 'node:fs/promises';
 import { startRuntime } from './runtime.mjs';
 import { APP_ORIGIN, trustedSender, runtimeEnvironment } from './policy.mjs';
 import { WorkspaceFiles } from './workspace-files.mjs';
+import {ProjectEdits} from './project-edits.mjs';
 import { ProjectFolders } from './project-folders.mjs';
 import { ChatFiles } from './chat-files.mjs';
 import { AppConfig } from './app-config.mjs';
 
-protocol.registerSchemesAsPrivileged([{ scheme: 'studio-media', privileges: { standard: true, secure: true, stream: true, supportFetchAPI: true } }, {scheme:'studio-file',privileges:{standard:true,secure:true,stream:true,supportFetchAPI:true,corsEnabled:true}}]);
+protocol.registerSchemesAsPrivileged([{ scheme: 'studio-media', privileges: { standard: true, secure: true, stream: true, supportFetchAPI: true } }, {scheme:'studio-preview',privileges:{standard:true,secure:true}},{scheme:'studio-file',privileges:{standard:true,secure:true,stream:true,supportFetchAPI:true,corsEnabled:true}}]);
 const location = dirname(fileURLToPath(import.meta.url));
 const root = app.isPackaged ? join(process.resourcesPath, 'runtime') : join(location, '../.studio/desktop-build/runtime');
 const files = new Map();
-const workspaceFiles = new WorkspaceFiles();
+const htmlPreviews=new Map();
+async function compileHtml(path,root){const result=await request('htmlPreview',{path,root});const id=randomUUID();if(htmlPreviews.size>=40)htmlPreviews.delete(htmlPreviews.keys().next().value);htmlPreviews.set(id,result.html);return {src:`studio-preview://${id}/index.html`,width:result.width,height:result.height};}
+const workspaceFiles = new WorkspaceFiles(compileHtml);
 let chatFiles;
 const requests = new Map();
 let window, worker, runtime, quitting = false;
@@ -41,7 +44,8 @@ else {
     nativeTheme.themeSource = 'light';
     app.dock?.setIcon(join(root, 'app/public/brand/me-studio-mark-v1.png'));
     await mkdir(app.getPath('userData'), { recursive: true });
-    chatFiles=new ChatFiles(app.getPath('userData'));
+    chatFiles=new ChatFiles(app.getPath('userData'),compileHtml);
+    session.fromPartition('persist:me-studio-v1').protocol.handle('studio-preview',request=>{const html=htmlPreviews.get(new URL(request.url).hostname);return new Response(html??null,{status:html?200:404,headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','Content-Security-Policy':"sandbox; default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"}});});
     session.fromPartition('persist:me-studio-v1').protocol.handle('studio-file', request => chatFiles.owns(new URL(request.url).hostname)?chatFiles.serve(request):workspaceFiles.serve(request));
     session.fromPartition('persist:me-studio-v1').protocol.handle('studio-media', async request => {
       const path = files.get(new URL(request.url).hostname);
@@ -88,7 +92,9 @@ else {
     let configQueue=Promise.resolve();
     const configOperation=operation=>{const next=configQueue.catch(()=>{}).then(operation);configQueue=next;return next;};
     async function reloadConfig(){const c=await appConfig.read();await request('videoConfigure',{openai:c.env.OPENAI_API_KEY||'',meta:c.env.META_API_KEY||'',openrouter:c.env.OPENROUTER_API_KEY||'',eleven:c.env.ELEVENLABS_API_KEY||'',voiceId:c.env.STUDIO_SPEECH_VOICE_ID||'JBFqnCBsd6RMkjVDRZzb',speechModel:c.env.STUDIO_SPEECH_MODEL||'eleven_v3',language:c.env.STUDIO_SPEECH_LANGUAGE||'th',models:c.catalog.providers.flatMap(p=>p.models.filter(m=>m.enabled).map(m=>({provider:p.id,model:m.id}))) });return c;}
-    const projectFolders = new ProjectFolders(join(app.getPath('userData'), 'folder-projects.json'));
+    const activeProjects=new Set();
+    const projectFolders = new ProjectFolders(join(app.getPath('userData'), 'folder-projects.json'),id=>activeProjects.has(id));
+    const projectEdits=new ProjectEdits(projectFolders,async(projectId,source,replacement)=>{if(activeProjects.has(projectId))throw Error('PROJECT_BUSY');await request('projectRelink',{projectId,source});await request('projectRelink',{projectId,source:replacement});});
     let choosingFolder = false;
     let projectFolderSelection;
     let rootQueue = Promise.resolve();
@@ -123,20 +129,25 @@ else {
           return {ok:true,value:await configOperation(async()=>{await appConfig.import(await readFile(picked.filePaths[0],'utf8'));await reloadConfig();return await request('videoStatus');})};
         }
         if(method==='videoProduce'){
+
           if((input?.projectId!==undefined&&typeof input.projectId!=='string')||typeof input?.sessionId!=='string'||typeof input?.requestId!=='string'||typeof input?.text!=='string'||input.text.length>8000)throw Error('INVALID_REQUEST');
+          const lease=input?.projectId||'00000000-0000-4000-8000-000000000001';const boundProject=await projectFolders.acquireBinding(input.projectId,()=>{if(activeProjects.size)throw Error('VIDEO_BUSY');activeProjects.add(lease);});try{
           const media=await chatFiles.agentInputs(input.attachments||[],input.projectId,async bytes=>{let image=nativeImage.createFromBuffer(bytes);if(image.isEmpty())throw Error('INVALID_IMAGE');for(const size of [1280,960,640,400]){const dimensions=image.getSize(),ratio=Math.min(1,size/Math.max(dimensions.width,dimensions.height));const scaled=image.resize({width:Math.max(1,Math.round(dimensions.width*ratio)),height:Math.max(1,Math.round(dimensions.height*ratio))});const png=scaled.toPNG();if(png.length<=250000)return 'data:image/png;base64,'+png.toString('base64');const jpeg=scaled.toJPEG(75);if(jpeg.length<=250000)return 'data:image/jpeg;base64,'+jpeg.toString('base64');image=scaled;}throw Error('INVALID_IMAGE');});
           const c=await configOperation(reloadConfig);
           const provider=input.provider||c.catalog.defaultProvider,model=input.model||c.catalog.defaultModel;
           if(!c.catalog.providers.some(p=>p.id===provider&&p.configured&&p.models.some(m=>m.id===model&&m.enabled)))throw Error('MODEL_NOT_AVAILABLE');
-          let project=(await projectFolders.list()).find(p=>p.id===input.projectId);
+          let project=boundProject;
           if(input.projectId&&!project)throw Error('INVALID_PROJECT');
           if(!project){const sourcePath=join(app.getPath('userData'),'workspace');await mkdir(sourcePath,{recursive:true});project={id:'00000000-0000-4000-8000-000000000001',sourcePath,outputPath:join(sourcePath,'output')};}
           const result=await request('videoProduce',{projectId:project.id,sessionId:input.sessionId,requestId:input.requestId,text:input.text,provider,model,reasoning:provider==='meta'?'auto':c.catalog.reasoning||'auto',media,source:project.sourcePath,outputRoot:project.outputPath});
           if(result.artifact)result.artifact.files=await videoFileReferences(result.artifact.id,project.id);
           if(result.previews)result.files=await Promise.all(result.previews.map(path=>chatFiles.register(path,project.outputPath,project.id)));
+          if(result.resultFiles){for(const file of result.resultFiles){const ref=await chatFiles.register(file.path,file.root,project.id);result.files=[...(result.files||[]),ref].slice(-10);if(file.open)result.openFile=ref;}delete result.resultFiles;}
+          if(result.artifact?.files?.[0])result.openFile=result.artifact.files[0];
           delete result.previews;
           result.projectId=project.id;
           return {ok:true,value:publicValue(result)};
+          }finally{activeProjects.delete(lease);}
         }
         if(method==='videoSave'){
           const a=await request('videoArtifact',{id:input?.id,projectId:input?.projectId});
@@ -147,6 +158,10 @@ else {
           const a=await request('videoArtifact',{id:input?.id,projectId:input?.projectId});
           return {ok:true,value:{...publicValue({id:a.id,title:a.title,outputPath:a.outputPath}),files:await videoFileReferences(a.id,input.projectId)}};
         }
+        if(method==='beginProjectEdit')return {ok:true,value:await projectEdits.begin(input?.id)};
+        if(method==='cancelProjectEdit'){projectEdits.cancel(input?.token);return {ok:true,value:{}};}
+        if(method==='saveProjectEdit')return {ok:true,value:await projectEdits.save(input)};
+        if(method==='pickProjectDirectory'){if(choosingFolder)throw Error('FOLDER_BUSY');projectEdits.get(input?.token);choosingFolder=true;try{const picked=await dialog.showOpenDialog(window,{title:'เลือกโฟลเดอร์ Project',buttonLabel:'เลือกโฟลเดอร์',properties:['openDirectory']});return {ok:true,value:picked.canceled||!picked.filePaths[0]?null:await projectEdits.select(input.token,input.kind,picked.filePaths[0])};}finally{choosingFolder=false;}}
         if (method === 'projects') return {ok:true,value:await projectFolders.list()};
         if (method === 'activate') {
           if (!input || typeof input.id !== 'string' || !/^[a-f0-9-]{36}$/.test(input.id)) throw new Error('INVALID_PROJECT');
@@ -167,7 +182,7 @@ else {
             const picked = await dialog.showOpenDialog(window, {title:'เลือกโฟลเดอร์ Project',buttonLabel:'เลือกโฟลเดอร์',properties:['openDirectory']});
             if (picked.canceled || !picked.filePaths[0]) return {ok:true,value:null};
             if (method === 'setProjectOutput') return {ok:true,value:await projectFolders.setOutput(input.id,picked.filePaths[0])};
-            if (method === 'relinkProject') return {ok:true,value:await projectFolders.relink(input.id,picked.filePaths[0])};
+            if (method === 'relinkProject') {if(activeProjects.has(input.id))throw Error('PROJECT_BUSY');await request('projectRelink',{projectId:input.id,source:await projectFolders.pathFor(input.id)});await request('projectRelink',{projectId:input.id,source:picked.filePaths[0]});return {ok:true,value:await projectFolders.relink(input.id,picked.filePaths[0])};}
             projectFolderSelection = { id:randomUUID(), path:picked.filePaths[0] };
             return {ok:true,value:{id:projectFolderSelection.id,name:basename(picked.filePaths[0])}};
           } finally { choosingFolder = false; }
@@ -183,7 +198,7 @@ else {
         if (!['list','open'].includes(method)||!input||typeof input.id!=='string'||!/^[a-f0-9-]{36}$/.test(input.id)) throw new Error('INVALID_FILE');
         return {ok:true,value:method==='list'?await workspaceFiles.list(input.id):await workspaceFiles.preview(input.id)};
       } catch(error) {
-        const safe=['INVALID_FILE','INVALID_FOLDER','FILE_OUTSIDE_FOLDER','FILE_TOO_LARGE','FOLDER_LIMIT','INVALID_PROJECT','INVALID_REGISTRY','DUPLICATE_FOLDER','INVALID_CONFIG','INVALID_DEFAULT_MODEL','CONFIG_OPEN_FAILED','MODEL_NOT_AVAILABLE','ATTACHMENT_LIMIT','INVALID_IMAGE'];
+        const safe=['PROJECT_BUSY','PROJECT_CONFLICT','INVALID_EDIT','FOLDER_BUSY','VIDEO_BUSY','INVALID_FILE','INVALID_FOLDER','FILE_OUTSIDE_FOLDER','FILE_TOO_LARGE','FOLDER_LIMIT','INVALID_PROJECT','INVALID_REGISTRY','DUPLICATE_FOLDER','INVALID_CONFIG','INVALID_DEFAULT_MODEL','CONFIG_OPEN_FAILED','MODEL_NOT_AVAILABLE','ATTACHMENT_LIMIT','INVALID_IMAGE'];
         return {ok:false,error:safe.includes(error.message)?error.message:'FILE_READ_FAILED'};
       }
     });

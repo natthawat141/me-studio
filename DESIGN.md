@@ -68,3 +68,7 @@ Native Settings → AI providers uses a searchable model-management list, groupe
 ## Assistant response typography
 
 Render assistant Markdown semantically instead of preformatted plain text. Reuse the existing font/column/palette: 14px body, 1.8 line height, moderate 16–18px headings, 14px paragraph rhythm and real list indentation. Shot tables have restrained gray horizontal hairlines without outer cards or grid borders. Tables/code scroll within the answer on narrow panels and mobile. User text remains literal. Saved wording is not rewritten.
+
+## Desktop 0.2 details
+
+Project editor uses one name field, quiet source/output path rows and Cancel/Save; native directory selection is staged. No stacked decorative cards or heavy white separators. Delete confirmation has an explicit surface in both themes. Actual tool activity is a compact expandable row; the chat or collapsed Project has one small neutral spinner, replaced by an unread result dot when appropriate. Preview offers ตัวอย่าง / โค้ด only for host-validated HTML; its isolated content scales to fit the panel. Existing file names truncate within their reserved area rather than underneath controls.

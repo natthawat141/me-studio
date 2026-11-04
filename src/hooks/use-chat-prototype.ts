@@ -1,4 +1,6 @@
 'use client';
+import {reduceActivity,activityLabel,type Activity} from '@/lib/production-activity';
+
 
 import { useEffect, useRef, useState } from 'react';
 import { chatPrototypeKey, emptyThread, initialChatState, prototypeSchema, sampleReply, type ChatProvider, type ChatPrototypeState } from '@/lib/chat-prototype';
@@ -8,11 +10,16 @@ import { commitChatMessage, createChatDraft, restoreChatDrafts } from '@/lib/cha
 
 export function useChatPrototype() {
   const [state, setState] = useState<ChatPrototypeState>(initialChatState);
-  const [activeId, setActiveId] = useState('new');
+  const [activeId, updateActiveId] = useState('new');
+  function setActiveId(id:string){visibleId.current=id;updateActiveId(id);setState(s=>({...s,threads:s.threads.map(t=>t.id===id?{...t,unread:false}:t)}));}
   const [ready, setReady] = useState(false);
   const [storageError, setStorageError] = useState('');
   const [pendingId, setPendingId] = useState<string>();
+  const resultRequest=useRef('');
   const nativeRequest=useRef<{requestId:string;sessionId:string;assistantId:string;userId:string;streamed:string}|undefined>(undefined);
+  const [activities,setActivities]=useState<Record<string,Activity[]>>({});
+  const [completion,setCompletion]=useState<{sessionId:string;requestId:string;file?:ChatFileRef}>();
+  const visibleId=useRef(activeId);
   const [productionStage,setProductionStage]=useState<{sessionId:string;text:string}>();
   useEffect(()=>window.meStudioFiles?.onProductionEvent?.(event=>{
     const request=nativeRequest.current;
@@ -22,9 +29,10 @@ export function useChatPrototype() {
       const text=request.streamed;
       setState(s=>({...s,threads:s.threads.map(t=>t.id===request.sessionId?{...t,messages:t.messages.some(m=>m.id===request.assistantId)?t.messages.map(m=>m.id===request.assistantId?{...m,text}:m):[...t.messages,{id:request.assistantId,role:'assistant',text}]}:t)}));
     }
-    if(event.type==='tool_start')setProductionStage({sessionId:request.sessionId,text:event.name==='render_video'?'กำลังเรนเดอร์วิดีโอ':event.name==='inspect_animation'?'กำลังตรวจภาพผลงาน':'กำลังทำงาน'});
+    if(event.type==='activity'){setActivities(s=>({...s,[request.sessionId]:reduceActivity(s[request.sessionId]??[],event)}));if(event.status==='started'&&event.action){const rows=reduceActivity([],event);if(rows[0])setProductionStage({sessionId:request.sessionId,text:'กำลัง'+activityLabel(rows[0])});}else setProductionStage(undefined);}
+    if(event.type==='tool_start')setProductionStage({sessionId:request.sessionId,text:event.name==='render_video'?'กำลังเรนเดอร์วิดีโอ':event.name==='inspect_animation'?'กำลังตรวจภาพผลงาน':event.name==='save_html_animation'?'กำลังสร้าง HTML และภาพตัวอย่าง':event.name==='capture_project_html'?'กำลังแปลง HTML เป็นภาพ':event.name==='write_project_file'?'กำลังบันทึกไฟล์ใน Project':'กำลังทำงาน'});
     if(event.type==='tool_end')setProductionStage(undefined);
-    if(event.type==='render')setProductionStage({sessionId:request.sessionId,text:'กำลังเรนเดอร์วิดีโอ'});
+    if(event.type==='render')setProductionStage({sessionId:request.sessionId,text:'กำลังเรนเดอร์วิดีโอ'+(event.completed!==undefined&&event.total?' '+event.completed+'/'+event.total+' เฟรม':'')});
   }),[]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -82,15 +90,17 @@ export function useChatPrototype() {
   }
   function sendProduction(projectId?:string,files:ChatFileRef[]=[],selection?:NativeSelection,textOverride?:string) {
     if(!ready||pendingId||(!(textOverride??active.draft).trim()&&!files.length)||!window.meStudioFiles?.produceVideo)return false;
+    setActivities(s=>({...s,[active.id]:[]}));
     const id=active.id,text=(textOverride??active.draft).trim()||'ช่วยดูไฟล์ที่แนบให้หน่อย',requestId=crypto.randomUUID();setPendingId(id);
     const userMessageId=crypto.randomUUID(),assistantId=crypto.randomUUID();
-    nativeRequest.current={requestId,sessionId:id,assistantId,userId:userMessageId,streamed:''};
+    resultRequest.current=requestId;nativeRequest.current={requestId,sessionId:id,assistantId,userId:userMessageId,streamed:''};
     const references=files.length?files:[...active.messages].reverse().find(m=>m.role==='user'&&m.files?.length)?.files??[];
     setState(s=>{const next=commitChatMessage(s,active,{id:userMessageId,role:'user',text,delivery:'sent',...(files.length?{files}:{})});return textOverride?{...next,threads:next.threads.map(t=>t.id===id?{...t,draft:active.draft}:t)}:next;});
     void window.meStudioFiles.produceVideo({projectId,sessionId:id,requestId,text,attachments:references.map(f=>({id:f.id})),...selection}).then(result=>{
       if(nativeRequest.current?.requestId!==requestId)return;
+      setCompletion({sessionId:id,requestId,...(visibleId.current===id&&result.openFile?{file:result.openFile}:{})});
       const message={id:assistantId,role:'assistant' as const,text:result.text.slice(0,100000),...(result.files?.length?{files:result.files}:{}),...(result.choices?{choices:result.choices}:{}),...(result.artifact?{artifacts:[{id:result.artifact.id,title:result.artifact.title,kind:'video' as const,src:result.artifact.url,poster:'' as const,nativeProjectId:result.projectId??projectId,files:result.artifact.files}]}:{})};
-      setState(s=>({...s,threads:s.threads.map(t=>t.id===id?{...t,messages:t.messages.some(m=>m.id===assistantId)?t.messages.map(m=>m.id===assistantId?message:m):[...t.messages,message]}:t)}));
+      setState(s=>({...s,threads:s.threads.map(t=>t.id===id?{...t,unread:visibleId.current!==id,messages:t.messages.some(m=>m.id===assistantId)?t.messages.map(m=>m.id===assistantId?message:m):[...t.messages,message]}:t)}));
     }).catch(()=>{
       if(nativeRequest.current?.requestId!==requestId)return;
       const partial=nativeRequest.current.streamed;
@@ -104,8 +114,9 @@ export function useChatPrototype() {
     setState(s=>commitChatMessage(s,active,{id:crypto.randomUUID(),role:'user',text,files}));return true;
   }
   function stop() {
+    resultRequest.current='';
     const request=nativeRequest.current;nativeRequest.current=undefined;
-    if(request){void window.meStudioFiles?.cancelVideo?.({requestId:request.requestId});setState(s=>({...s,threads:s.threads.map(t=>t.id===request.sessionId?{...t,messages:t.messages.map(m=>m.id===request.assistantId?{...m,text:m.text+'\n\nหยุดแล้ว'}:m)}:t)}));}
+    if(request){setActivities(s=>({...s,[request.sessionId]:(s[request.sessionId]??[]).map(a=>a.status==='started'?{...a,status:'cancelled'}:a)}));void window.meStudioFiles?.cancelVideo?.({requestId:request.requestId});setState(s=>({...s,threads:s.threads.map(t=>t.id===request.sessionId?{...t,messages:t.messages.map(m=>m.id===request.assistantId?{...m,text:m.text+'\n\nหยุดแล้ว'}:m)}:t)}));}
     if(timer.current)clearTimeout(timer.current);timer.current=null;setPendingId(undefined);setProductionStage(undefined);
   }
 
@@ -132,7 +143,7 @@ export function useChatPrototype() {
     setState(s => s.preferences.collapsedProjects[id] ? { ...s, preferences: { ...s.preferences, collapsedProjects: { ...s.preferences.collapsedProjects, [id]: false } } } : s);
   }
   return {
-    state, active, activeId, productionStage, sendProduction, attach, setActiveId, newChat, draft, send, stop, pendingId, ready, storageError, rename, deleteChat, provider, toggleProject, revealProject,
+    state, active, activeId, activities, completion, isResultCurrent:(requestId:string)=>resultRequest.current===requestId, productionStage, sendProduction, attach, setActiveId, newChat, draft, send, stop, pendingId, ready, storageError, rename, deleteChat, provider, toggleProject, revealProject,
     selectProvider: (id: string) => setState(s => ({ ...s, selectedProvider: id })),
     preferences: (patch: Partial<ChatPrototypeState['preferences']>) => setState(s => ({ ...s, preferences: { ...s.preferences, ...patch } })),
   };

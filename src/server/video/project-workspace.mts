@@ -52,6 +52,7 @@ export async function createProductionWorkspace(options:{source:string;storage:s
     if(entries.length>=100){truncated=true;break;}entries.push({name:entry.name,path:[path,entry.name].filter(Boolean).join('/'),kind:entry.isDirectory()?'directory':'file'});
    }return {entries,truncated};
   },
+  async resolveFile(path:string){if(!/\.(md|txt|html|css|json|csv|yaml|yml|png|jpg|jpeg|webp|gif|avif|mp4|webm|mp3|wav|m4a)$/i.test(path))throw Error('PROJECT_PATH_DENIED');const file=await checked(path);if(!(await lstat(file)).isFile())throw Error('PROJECT_PATH_DENIED');return file;},
   async readText(path:string){if(!allowedText.test(path))throw Error('PROJECT_PATH_DENIED');const file=await checked(path);if(!(await lstat(file)).isFile()||(await lstat(file)).size>64000)throw Error('FILE_TOO_LARGE');return readFile(file,'utf8');},
   async writeText(path:string,text:string){
    if(!allowedText.test(path)||typeof text!=='string'||Buffer.byteLength(text)>64000)throw Error('PROJECT_PATH_DENIED');const file=await checked(path,true);

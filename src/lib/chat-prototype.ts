@@ -26,7 +26,7 @@ const messageSchema = z.object({
 export type ChatMessage = z.infer<typeof messageSchema>;
 const threadSchema = z.object({
   id: z.string(), projectId: z.string().optional(), title: z.string().max(80), draft: z.string().max(8000),
-  messages: z.array(messageSchema), updatedAt: z.number(),
+  unread:z.boolean().optional(), messages: z.array(messageSchema), updatedAt: z.number(),
 }).strict();
 export type ChatThread = z.infer<typeof threadSchema>;
 export const prototypeSchema = z.object({

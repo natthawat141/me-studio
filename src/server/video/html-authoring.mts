@@ -3,7 +3,7 @@ import {chromium} from 'playwright-core';
 import type {PreviewAsset} from './project-workspace.mjs';
 import {toolEnvironment} from '../../../scripts/local/tools.mjs';
 
-type PreviewOptions={browser:string;width:number;height:number;timeMs?:number;path:string;assets?:Record<string,PreviewAsset>;signal?:AbortSignal};
+type PreviewOptions={browser:string;width:number;height:number;timeMs?:number;path:string;assets?:Record<string,PreviewAsset>;signal?:AbortSignal;inlineAssets?:boolean};
 /** The model authors declarative HTML/CSS/SVG, never executable JS. Chromium remains isolated from the app. */
 export async function prepareHtmlPreview(markup:string,options:PreviewOptions){
  options.signal?.throwIfAborted();
@@ -17,9 +17,14 @@ export async function prepareHtmlPreview(markup:string,options:PreviewOptions){
   await context.route('**/*',route=>{const url=new URL(route.request().url());if(url.origin!==origin)return route.abort('blockedbyclient');if(url.pathname==='/index.html')return route.fulfill({status:200,contentType:'text/html',body:renderedDocument});const asset=assets[url.pathname.slice(1)];return asset?route.fulfill({status:200,contentType:asset.mime,body:asset.bytes}):route.abort('blockedbyclient');});
   const page=await context.newPage();
   // DOMParser creates an inert document. Reject active elements/attributes before putting anything on a page.
-  const safe=await page.evaluate(({raw,names})=>{
+  const safe=await page.evaluate(({raw,names,inline})=>{
    const doc=new DOMParser().parseFromString(raw,'text/html');
    const allowed=new Set('html head body title style div span p h1 h2 h3 h4 h5 h6 main section article header footer aside figure figcaption br strong b em i small ul ol li img svg g path rect circle ellipse line polyline polygon text tspan defs lineargradient radialgradient stop clippath mask filter fegaussianblur feoffset feblend fecolormatrix'.split(' '));
+   for(const meta of Array.from(doc.querySelectorAll('meta'))){
+    const attrs=Array.from(meta.attributes);const benign=attrs.length===1&&((attrs[0].name.toLowerCase()==='charset'&&attrs[0].value.toLowerCase()==='utf-8')||(attrs[0].name.toLowerCase()==='name'&&attrs[0].value.toLowerCase()==='viewport'));
+    const viewport=attrs.length===2&&meta.getAttribute('name')?.toLowerCase()==='viewport'&&attrs.every(a=>['name','content'].includes(a.name.toLowerCase()));
+    if(!benign&&!viewport)throw Error('HTML_ACTIVE_CONTENT');meta.remove();
+   }
    const nodes=Array.from(doc.querySelectorAll('*'));if(nodes.length>2500)throw Error('HTML_NODE_LIMIT');
    for(const el of nodes){
     if(!allowed.has(el.localName.toLowerCase()))throw Error('HTML_ACTIVE_CONTENT');
@@ -33,8 +38,9 @@ export async function prepareHtmlPreview(markup:string,options:PreviewOptions){
    }
    const css=[...doc.querySelectorAll('style')].map(e=>e.textContent||'').concat(nodes.map(e=>e.getAttribute('style')||'')).join('\n');
    if(/@import|@font-face|expression\s*\(|javascript\s*:|url\s*\(\s*(?!['"]?#[a-zA-Z0-9_-]+['"]?\s*\))/i.test(css))throw Error('HTML_EXTERNAL_RESOURCE');
+   if(inline)for(const image of Array.from(doc.querySelectorAll('img'))){const value=inline[image.getAttribute('src')||''];if(value)image.setAttribute('src',value);}
    return doc.head.innerHTML+doc.body.innerHTML;
-  },{raw:markup,names:Object.keys(assets)});
+  },{raw:markup,names:Object.keys(assets),inline:options.inlineAssets?Object.fromEntries(Object.entries(assets).map(([name,a])=>[name,`data:${a.mime};base64,${a.bytes.toString('base64')}`])):undefined}).catch(error=>{const match=/HTML_(?:ACTIVE_CONTENT|EXTERNAL_RESOURCE|NODE_LIMIT)/.exec(error instanceof Error?error.message:'');throw Error(match?.[0]||'HTML_PREVIEW_FAILED');});
   const nonce=randomBytes(18).toString('base64');
   const html=`<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"><style>html,body{margin:0;width:${options.width}px;height:${options.height}px;overflow:hidden}*{box-sizing:border-box}</style></head><body>${safe}<script nonce="${nonce}">window.seek=async function(ms){for(const a of document.getAnimations()){a.pause();a.currentTime=ms;}await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));};</script></body></html>`;
   renderedDocument=html;await page.goto(origin+'/index.html',{waitUntil:'load',timeout:10000});

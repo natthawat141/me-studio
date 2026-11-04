@@ -1,4 +1,5 @@
 'use client';
+import {version} from '../../../package.json';
 
 import { useState } from 'react';
 import { ArrowLeft, ArrowUpRight, Check, ChevronRight, Info, Settings2, SlidersHorizontal, X } from 'lucide-react';
@@ -69,7 +70,7 @@ function SettingsBody(props: Props) {
         {error && <p role="alert" className="composer-error">{error}</p>}
         <div className="provider-form-footer"><button className="chat-button" type="button" onClick={() => setEditing(undefined)}>ยกเลิก</button><button className="chat-button primary" type="submit">บันทึกการตั้งค่า</button></div>
       </form>)}
-      {category === 'about' && <><h2>me studio</h2><p className="settings-intro">ต้นแบบแอปแชตสำหรับสร้างวิดีโอ</p><div className="setting-row"><span>เวอร์ชัน</span><span className="setting-value">0.1 · Frontend prototype</span></div><p className="settings-footnote">คำตอบและผลงานที่แสดงเป็นข้อมูลตัวอย่าง ยังไม่เชื่อมต่อ AI หรือระบบสร้างวิดีโอในหน้าจอนี้</p><h3 className="settings-section-title">UI components</h3><a className="settings-source" href="https://github.com/ibelick/prompt-kit" target="_blank" rel="noreferrer">Prompt Kit <ArrowUpRight size={15} /></a><a className="settings-source" href="https://ui.shadcn.com/docs/components" target="_blank" rel="noreferrer">shadcn/ui · Base UI <ArrowUpRight size={15} /></a></>}
+      {category === 'about' && <><h2>me studio</h2><p className="settings-intro">แอปสร้างแอนิเมชันและวิดีโอผ่านการสนทนา</p><div className="setting-row"><span>เวอร์ชัน</span><span className="setting-value">{version}</span></div><p className="settings-footnote">แอปบน Mac ใช้ Python agent กับเครื่องมือสร้าง HTML และ MP4 ในเครื่อง การเชื่อมต่อโมเดลขึ้นอยู่กับผู้ให้บริการที่ตั้งค่าไว้</p><h3 className="settings-section-title">UI components</h3><a className="settings-source" href="https://github.com/ibelick/prompt-kit" target="_blank" rel="noreferrer">Prompt Kit <ArrowUpRight size={15} /></a><a className="settings-source" href="https://ui.shadcn.com/docs/components" target="_blank" rel="noreferrer">shadcn/ui · Base UI <ArrowUpRight size={15} /></a></>}
     </section>
   </div>;
 }

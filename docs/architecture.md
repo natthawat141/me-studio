@@ -60,3 +60,11 @@ AppConfig in Electron owns a fixed userData/config.env path and returns safe mod
 ## Deep Agents runtime update
 
 The active Python video runtime now uses Deep Agents SDK with explicit LangChain model adapters. Node retains Project grants, credentials, SQLite and production tools. Real Project image assets, three-frame draft/MP4 inspection, up to three versioned render attempts/request, native request-scoped streaming/Stop and persisted reasoning effort are implemented. See [Python runtime guide](python-agent-runtime.md) for exact limits and trust boundaries. Verification and live-provider quality are separate claims. Research/Tavily and richer creative skill content remain subsequent work.
+
+## Desktop 0.2: verified previews and stable Project state
+
+The worker file-preview module resolves only host-owned roots, rejects symlinks/escapes, bounds source/raster bytes, and reuses html-authoring validation. Main keeps compiled HTML under a bounded ephemeral opaque studio-preview grant. The protocol adds sandbox + script-none CSP, and the iframe grants neither scripts nor same-origin. Local assets are inlined after validation; arbitrary HTML is never injected into the app DOM. Sources remain escaped in the Code view, and unsupported files return a preview error.
+
+Production publishes host-resolved resultFiles; main persists ChatFiles IDs and removes host paths from renderer results. save_html_animation writes versioned design-N.html beside compiler-owned scene.html. capture_project_html creates a unique PNG without changing the active creative draft/voice. Request/session-scoped host activity supplies safe relative paths and operation states without forwarding arbitrary arguments.
+
+ProjectEdits owns expiring, single-use native edit tokens and staged source/output selections. ProjectFolders applies a revision-checked atomic registry update. Main holds a Project lease across production setup and completion; directory mutation checks that lease inside the queued update. Before a source change, the worker copies validated known legacy state to userData/project-state/<projectId>/<sessionId>; subsequent runs use the same state location. Project skill preferences live one level above sessions; custom skill documents remain in the chosen source. Corrupt destination data and originals are preserved.

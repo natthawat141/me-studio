@@ -56,3 +56,9 @@ User intent and references govern direction. Expertise helps explain choices and
 ## Deep Agents runtime update
 
 The active Python video runtime now uses Deep Agents SDK with explicit LangChain model adapters. Node retains Project grants, credentials, SQLite and production tools. Real Project image assets, three-frame draft/MP4 inspection, up to three versioned render attempts/request, native request-scoped streaming/Stop and persisted reasoning effort are implemented. See [Python runtime guide](docs/python-agent-runtime.md) for exact limits and trust boundaries. Verification and live-provider quality are separate claims. Research/Tavily and richer creative skill content remain subsequent work.
+
+## Desktop 0.2 release behavior (2026-11-04)
+
+Validated declarative HTML results are real versioned files with an isolated in-app preview and a separate source view. Existing local HTML can be validated/opened or captured as a PNG without image-generation credentials. The source-only policy continues for unsupported/active HTML and Python. Explicit create/show requests can open their verified result; ordinary reads do not open a panel. Generated MP4 uses the local player without a download requirement.
+
+Actual host operations populate bounded activity history and running indicators; results completed away from a chat carry an unread dot. Project creation derives a name from the selected folder; the compact editor stages name/source/output until Save and rejects conflicting/busy edits. Conversation working state is ID-scoped under native userData so source relink does not relocate or discard drafts/assets. Migration preserves the original known files. These are local desktop capabilities, not a hosted service. Release verification is recorded in docs/plans/2026-11-04-project-settings-and-activity.md.

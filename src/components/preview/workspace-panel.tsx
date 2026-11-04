@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect,useRef,useState } from 'react';
 import { ChevronDown,ChevronRight,File,FileCog,Folder,FolderOpen,FolderPlus,Maximize2,Minimize2,PanelRight,RefreshCw,Search } from 'lucide-react';
 import type { WorkspaceEntry,WorkspacePreview } from '@/lib/workspace-files';
 import type { useWorkspaceFiles } from '@/hooks/use-workspace-files';
@@ -58,14 +58,21 @@ export function WorkspacePanel({files,onOpenConfig}:{files:Controller;onOpenConf
 }
 function WorkspaceFilePreview({file}:{file:WorkspacePreview}) {
   const [error,setError]=useState(false);
+  const [source,setSource]=useState(false);
   return <div className={`workspace-file-preview file-kind-${file.kind}`} aria-label={`พรีวิว ${file.entry.name}`}>
     {file.kind==='video'&&<video controls controlsList="nodownload" playsInline preload="metadata" src={file.src} aria-label={file.entry.name} onError={()=>setError(true)}/>}
     {file.kind==='audio'&&<div className="workspace-audio"><File size={30} strokeWidth={1}/><span>{file.entry.name}</span><audio controls preload="metadata" src={file.src} aria-label={file.entry.name} onError={()=>setError(true)}/></div>}
     {file.kind==='image'&&<LocalImage src={file.src!} name={file.entry.name} onError={()=>setError(true)}/>}
-    {file.kind==='text'&&<pre tabIndex={0}>{file.text}</pre>}
+    {file.kind==='text'&&<div className="workspace-document">{file.previewSrc&&<nav className="workspace-document-tabs" aria-label="มุมมอง HTML"><button aria-pressed={!source} onClick={()=>setSource(false)}>ตัวอย่าง</button><button aria-pressed={source} onClick={()=>setSource(true)}>โค้ด</button></nav>}{file.previewSrc&&!source?<HtmlPreviewFrame file={file}/>:<pre tabIndex={0}>{file.text}</pre>}{file.previewError&&<p className="workspace-error" role="alert">HTML นี้ไม่ผ่านการตรวจพรีวิว ({file.previewError}) ยังเปิดโค้ดดูได้</p>}</div>}
     {file.kind==='unsupported'&&<p className="workspace-unsupported">ยังไม่รองรับพรีวิวไฟล์ประเภทนี้</p>}
     {error&&<p className="workspace-error" role="alert">เปิดไฟล์นี้ไม่สำเร็จ ไฟล์อาจเปลี่ยนแปลงหรือใช้รูปแบบที่เครื่องเล่นไม่รองรับ</p>}
   </div>;
+}
+function HtmlPreviewFrame({file}:{file:WorkspacePreview}){
+  const box=useRef<HTMLDivElement>(null);const [size,setSize]=useState({width:1,height:1});
+  useEffect(()=>{if(!box.current)return;const observer=new ResizeObserver(entries=>{const {width,height}=entries[0].contentRect;setSize({width,height});});observer.observe(box.current);return()=>observer.disconnect();},[]);
+  const width=file.previewWidth??720,height=file.previewHeight??1280,scale=Math.min(size.width/width,size.height/height);
+  return <div ref={box} className="workspace-html-stage"><iframe title={`ตัวอย่าง ${file.entry.name}`} src={file.previewSrc} sandbox="" referrerPolicy="no-referrer" style={{width,height,transform:`scale(${scale})`}}/></div>;
 }
 function LocalImage({src,name,onError}:{src:string;name:string;onError:()=>void}){
   // Local capability URLs are streamed by Electron, not Next's HTTP image optimizer.

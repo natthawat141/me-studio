@@ -1,3 +1,5 @@
+import {prepareProjectRelink} from '../src/server/video/project-state.mjs';
+import {compileFilePreview} from '../src/server/video/file-preview.mjs';
 import { createNativeProduction } from '../src/server/video/native-production.mjs';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
@@ -58,6 +60,8 @@ async function startRender(projectId: string, revision: number) {
 }
 
 async function dispatch(method: string, raw: unknown): Promise<unknown> {
+  if(method==='projectRelink'){const v=z.object({projectId:id,source:z.string()}).strict().parse(raw);await prepareProjectRelink({...v,data});return {}; }
+  if(method==='htmlPreview'){const v=z.object({path:z.string(),root:z.string()}).strict().parse(raw);return compileFilePreview({...v,browser:tools.browser});}
   if(method==='videoConfigure')return production.configure(raw);
   if(method==='videoStatus')return production.status();
   if(method==='videoProduce')return production.produce(raw);
@@ -116,7 +120,7 @@ async function dispatch(method: string, raw: unknown): Promise<unknown> {
 process.on('message', async (message: { requestId: string; method: string; input: unknown }) => {
   try { process.send?.({ requestId: message.requestId, result: await dispatch(message.method, message.input) }); }
   catch (error) {
-    const safe = ['REVISION_CONFLICT', 'RENDER_BUSY', 'CHAT_BUSY', 'META_KEY_REQUIRED', 'META_RUN_FAILED', 'MODEL_NOT_ALLOWED','VIDEO_KEYS_REQUIRED','VIDEO_BUSY','VIDEO_RUN_FAILED','ARTIFACT_NOT_FOUND'];
+    const safe = ['REVISION_CONFLICT', 'RENDER_BUSY', 'CHAT_BUSY', 'META_KEY_REQUIRED', 'META_RUN_FAILED', 'MODEL_NOT_ALLOWED','VIDEO_KEYS_REQUIRED','VIDEO_BUSY','VIDEO_RUN_FAILED','ARTIFACT_NOT_FOUND','HTML_ACTIVE_CONTENT','HTML_EXTERNAL_RESOURCE','HTML_NODE_LIMIT','HTML_PREVIEW_FAILED','HTML_TOO_LARGE','PROJECT_PATH_DENIED'];
     process.send?.({ requestId: message.requestId, error: error instanceof Error && safe.includes(error.message) ? error.message : 'DESKTOP_OPERATION_FAILED' });
   }
 });

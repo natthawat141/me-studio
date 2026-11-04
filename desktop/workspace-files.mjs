@@ -6,6 +6,7 @@ const media={'.mp4':['video','video/mp4'],'.m4v':['video','video/mp4'],'.webm':[
 const text=new Set(['.txt','.md','.json','.html','.css','.js','.ts','.tsx','.py','.yaml','.yml','.csv','.svg']);
 function kind(path){const ext=extname(path).toLowerCase();return media[ext]?.[0]??(text.has(ext)?'text':'unsupported');}
 export class WorkspaceFiles {
+  constructor(compileHtml){this.compileHtml=compileHtml;}
   #root; #entries=new Map(); #paths=new Map();
   // Host-only capability for an explicitly selected or generated single file.
   async grantFile(path,root){
@@ -48,6 +49,7 @@ export class WorkspaceFiles {
     if(result.kind==='text'){
       if(value.info.size>256*1024)throw new Error('FILE_TOO_LARGE');
       const file=await open(value.path,'r');try {const buffer=Buffer.alloc(256*1024+1);const {bytesRead}=await file.read(buffer,0,buffer.length,0);if(bytesRead>256*1024)throw new Error('FILE_TOO_LARGE');result.text=buffer.subarray(0,bytesRead).toString('utf8');}finally{await file.close();}
+      if(/\.html?$/i.test(value.path)&&this.compileHtml){try{const preview=await this.compileHtml(value.path,this.#root);result.previewSrc=preview.src;result.previewWidth=preview.width;result.previewHeight=preview.height;}catch(e){result.previewError=/^(HTML_|PROJECT_PATH_)/.test(e.message)?e.message:'HTML_PREVIEW_FAILED';}}
     }else if(result.kind!=='unsupported')result.src=`studio-file://${id}/${encodeURIComponent(value.entry.name)}`;
     return result;
   }

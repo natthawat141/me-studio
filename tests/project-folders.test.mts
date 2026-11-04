@@ -14,7 +14,7 @@ test('folder projects persist stable identity, relink a moved folder and preserv
     assert.deepEqual(await new ProjectFolders(registry).list(), [project]);
     await assert.rejects(store.create('ซ้ำ', folder), /DUPLICATE_FOLDER/);
     await rename(folder, moved); await assert.rejects(async () => await import('node:fs/promises').then(fs => fs.stat(folder)));
-    assert.deepEqual(await store.relink(project.id, moved), {...project,folderName:'moved',sourcePath:await realpath(moved),outputPath:join(await realpath(moved),'output')});
+    assert.deepEqual(await store.relink(project.id, moved), {...project,revision:1,folderName:'moved',sourcePath:await realpath(moved),outputPath:join(await realpath(moved),'output')});
     assert.equal(await store.pathFor(project.id), await realpath(moved));
     const updated=await store.setOutput(project.id,moved);
     assert.equal(updated.outputPath,await realpath(moved));

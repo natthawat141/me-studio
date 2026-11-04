@@ -53,3 +53,5 @@
  .workspace-body.has-file.list-expanded>.workspace-browser {display:flex;flex:1;border:0;}
  .workspace-body.has-file.list-expanded>.workspace-file-preview {display:none;}
 }
+
+.workspace-document{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}.workspace-html-stage{flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}.workspace-html-stage>iframe{flex-shrink:0;border:0;background:white;transform-origin:center;}.workspace-document>pre{flex:1;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;margin:0;padding:16px;font:11px/1.8 ui-monospace,monospace}.workspace-document-tabs{display:flex;gap:4px;padding:6px 10px;border-bottom:1px solid #8882}.workspace-document-tabs button{border:0;background:transparent;color:inherit;padding:5px 10px;border-radius:6px;font-size:12px}.workspace-document-tabs button[aria-pressed=true]{background:#8882}

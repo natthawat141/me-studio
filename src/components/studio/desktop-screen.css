@@ -289,7 +289,7 @@ body:has(.chat-app) { background:transparent; --focus-outline:#858b95; }
 .project-info {min-width:210px;}
 .project-info-name,.project-info-detail {display:flex;align-items:center;gap:8px;padding:8px;color:#646a73;font-size:12px;}
 .project-info-name {color:#30343a;}.project-info-detail+ .project-info-detail {border-top:1px solid rgba(128,128,138,.16);}
-.chat-delete-dialog {max-width:400px;padding:24px;}.chat-delete-dialog h2 {font-size:16px;}.chat-delete-dialog p {line-height:1.7;}
+.chat-delete-dialog {max-width:400px;padding:24px;background:#fff;color:#292b30;box-shadow:0 12px 36px #0002;}.chat-delete-dialog h2 {font-size:16px;}.chat-delete-dialog p {line-height:1.7;}
 .chat-delete-actions {display:flex;justify-content:flex-end;gap:8px;margin-top:12px;}.chat-delete-actions button {padding:7px 12px;border-radius:7px;border:0;background:#f2f3f4;}.chat-delete-actions button:last-child {background:#a6403b;color:white;}
 @media (hover:none) {.project-action {opacity:1;}}
 .project-hover-tooltip {display:block;min-width:210px;padding:5px;background:white;color:#454b54;border:1px solid #e8e9eb;border-radius:10px;box-shadow:0 8px 28px #0002;}
@@ -341,3 +341,11 @@ body:has(.chat-app) { background:transparent; --focus-outline:#858b95; }
 .provider-connection-form select { width:100%; height:37px; padding:7px 10px; border:1px solid #80808024; border-radius:7px; background:transparent; color:inherit; font:inherit; font-size:12px; margin-bottom:19px; }
 .chat-resend { display:block; margin:8px 0 0 auto; border:0; background:transparent; color:#92969e; padding:4px 0; font:inherit; font-size:11px; }
 .chat-resend:hover { color:inherit; }
+
+.chat-row-spinner {width:12px;height:12px;flex:none;border:1px solid #90949a55;border-top-color:#81858d;border-radius:50%;animation:chat-spin .8s linear infinite;margin-right:4px;}
+@keyframes chat-spin {to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.chat-row-spinner{animation:none}}
+
+.chat-unread{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;opacity:.65}.chat-activity{color:#858b94;font-size:12px;margin:12px 0 22px}.chat-activity summary{cursor:pointer;list-style:none}.chat-activity ol{list-style:none;padding:8px 0;margin:0}.chat-activity li{display:flex;justify-content:space-between;gap:16px;padding:5px 0}.chat-activity li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.chat-activity small{flex-shrink:0}.history-row>.chat-row-spinner{margin-right:5px;flex-shrink:0}
+
+.project-directory-row{display:flex;align-items:center;gap:16px;padding:18px 0;border-bottom:1px solid #8882}.project-directory-row>div{flex:1;min-width:0}.project-directory-row label{margin:0}.project-directory-row p{font-size:12px;color:#91959d;overflow-wrap:anywhere;margin:5px 0 0}.project-directory-row button{flex-shrink:0}.project-dialog [data-slot=dialog-description]{margin:0 0 22px;font-size:12px}.project-dialog input:focus-visible{outline:1px solid #8e929a;outline-offset:1px;box-shadow:none}

@@ -64,3 +64,7 @@ For current native behavior, [video-harness.md](video-harness.md) supersedes the
 ## Deep Agents runtime update
 
 The active Python video runtime now uses Deep Agents SDK with explicit LangChain model adapters. Node retains Project grants, credentials, SQLite and production tools. Real Project image assets, three-frame draft/MP4 inspection, up to three versioned render attempts/request, native request-scoped streaming/Stop and persisted reasoning effort are implemented. See [Python runtime guide](python-agent-runtime.md) for exact limits and trust boundaries. Verification and live-provider quality are separate claims. Research/Tavily and richer creative skill content remain subsequent work.
+
+## Desktop 0.2 ownership update
+
+See docs/plans/2026-11-04-project-settings-and-activity.md for the release checklist/evidence. src/server/video/file-preview.mts validates existing HTML for isolated preview/capture; desktop/main.mjs owns opaque studio-preview capabilities. desktop/project-edits.mjs and src/hooks/use-project-editor.ts own staged Project changes, while src/server/video/project-state.mts preserves ID-scoped working data across directory changes. src/lib/production-activity.ts validates bounded activity for the transcript/sidebar. Supported HTML previews now render in a sandboxed viewer; unsupported active HTML/Python remain source-only. No arbitrary generated-script execution was added.

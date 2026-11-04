@@ -9,7 +9,7 @@ const supported=/\.(mp4|m4v|webm|mp3|m4a|wav|ogg|png|jpg|jpeg|webp|gif|avif|txt|
 const scopeSchema=z.object({id:z.string().uuid(),projectId:z.string().uuid().optional()}).strict();
 export class ChatFiles {
   #data; #queue=Promise.resolve(); #services=new Map(); #previews=new Map();
-  constructor(data){this.#data=data;}
+  constructor(data,compileHtml){this.#data=data;this.compileHtml=compileHtml;}
   async #records(){try{return z.array(recordSchema).parse(JSON.parse(await readFile(join(this.#data,'chat-files.json'),'utf8')));}catch(e){if(e.code==='ENOENT')return [];throw Error('CHAT_FILE_INDEX_UNREADABLE');}}
   #dto(item){const {id,projectId,name,relativePath,kind}=item;return {id,projectId,name,relativePath,kind};}
   async register(path,root,projectId){
@@ -38,7 +38,7 @@ export class ChatFiles {
     // An ID cannot be redirected by replacing the original with a symlink.
     if(await realpath(item.path)!==item.path)throw Error('FILE_OUTSIDE_FOLDER');
     let service=this.#previews.get(item.id);
-    if(!service){service=new WorkspaceFiles();this.#previews.set(item.id,service);}
+    if(!service){service=new WorkspaceFiles(this.compileHtml);this.#previews.set(item.id,service);}
     const preview=await service.grantFile(item.path,item.root);
     if(preview.src)this.#services.set(new URL(preview.src).hostname,{service,path:item.path});
     return {...preview,entry:{...preview.entry,name:item.name,relativePath:item.relativePath}};

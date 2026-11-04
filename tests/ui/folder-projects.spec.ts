@@ -5,6 +5,9 @@ test('project groups chats and restores them after reload, with missing-folder r
     const root = {id:'root',name:'videos',relativePath:'',kind:'directory' as const,previewKind:'unsupported' as const};
     const listing = {directory:root,entries:[],truncated:false};
     window.meStudioFiles = {
+      beginProjectEdit:async()=>({token:'edit',name:'',nameOrigin:'folder',sourcePath:'',outputPath:'',folderName:''}),
+      pickProjectDirectory:async()=>({token:'edit',name:'videos',nameOrigin:'folder',sourcePath:'/videos',outputPath:'/videos/output',folderName:'videos'}),
+      saveProjectEdit:async({name})=>{const p={id:'project-1',name};sessionStorage.setItem('test-projects',JSON.stringify([p]));return p;},cancelProjectEdit:async()=>({}),
       projects: async () => JSON.parse(sessionStorage.getItem('test-projects') ?? '[]'),
       pickProjectFolder: async () => ({id:'selection-1',name:'videos'}),
       createProject: async ({name}) => { const p={id:'project-1',name};sessionStorage.setItem('test-projects',JSON.stringify([p]));return p; },
@@ -18,7 +21,7 @@ test('project groups chats and restores them after reload, with missing-folder r
   await page.getByRole('button',{name:'สร้าง Project'}).click();
   await page.getByLabel('ชื่อโปรเจกต์').fill('ช่องของฉัน');
   await expect(page.getByRole('dialog').getByRole('button',{name:'สร้างโปรเจกต์'})).toBeDisabled();
-  await page.getByRole('dialog').getByRole('button',{name:'เลือกโฟลเดอร์'}).click();
+  await page.getByRole('dialog').getByRole('button',{name:'เลือกโฟลเดอร์ต้นทาง'}).click();
   await expect(page.getByRole('dialog')).toContainText('videos');
   await page.getByRole('dialog').getByRole('button',{name:'สร้างโปรเจกต์'}).click();
   await expect(page.getByRole('button',{name:'ช่องของฉัน',exact:true})).toBeVisible();
@@ -77,7 +80,7 @@ test('project settings select source and output folders without moving chats', a
     let project={id:'a',name:'ช่อง A',folderName:'source',sourcePath:'/videos/source',outputPath:'/videos/source/output'};
     const root={id:'root',name:'source',relativePath:'',kind:'directory' as const,previewKind:'unsupported' as const};
     const listing={directory:root,entries:[],truncated:false};
-    window.meStudioFiles={projects:async()=>[project],pickProjectFolder:async()=>null,createProject:async()=>project,activateProject:async()=>listing,relinkProject:async()=>{project={...project,folderName:'new-source',sourcePath:'/videos/new-source'};return project;},setProjectOutput:async()=>{project={...project,outputPath:'/exports'};return project;},chooseFolder:async()=>listing,listFolder:async()=>listing,openFile:async()=>{throw Error('INVALID_FILE');}};
+    window.meStudioFiles={beginProjectEdit:async()=>({token:'edit',...project,nameOrigin:'custom',sourcePath:project.sourcePath,outputPath:project.outputPath}),pickProjectDirectory:async({kind})=>({token:'edit',...project,nameOrigin:'custom',folderName:'new-source',sourcePath:'/videos/new-source',outputPath:kind==='output'?'/exports':project.outputPath}),saveProjectEdit:async({name})=>{project={...project,name,sourcePath:'/videos/new-source',outputPath:'/exports'};return project;},cancelProjectEdit:async()=>({}),projects:async()=>[project],pickProjectFolder:async()=>null,createProject:async()=>project,activateProject:async()=>listing,relinkProject:async()=>{project={...project,folderName:'new-source',sourcePath:'/videos/new-source'};return project;},setProjectOutput:async()=>{project={...project,outputPath:'/exports'};return project;},chooseFolder:async()=>listing,listFolder:async()=>listing,openFile:async()=>{throw Error('INVALID_FILE');}};
   });
   await page.goto('/desktop');
   await page.getByRole('button',{name:'รายละเอียด ช่อง A'}).click();
@@ -88,6 +91,6 @@ test('project settings select source and output folders without moving chats', a
   await expect(dialog).toContainText('/videos/new-source');
   await dialog.getByRole('button',{name:'เลือกโฟลเดอร์ผลงาน'}).click();
   await expect(dialog).toContainText('/exports');
-  await dialog.getByRole('button',{name:'ปิดตั้งค่า Project'}).click();
+  await dialog.getByRole('button',{name:'บันทึก',exact:true}).click();
   await expect(dialog).toHaveCount(0);
 });

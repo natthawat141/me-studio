@@ -1,6 +1,78 @@
 # Project settings and visible agent activity implementation plan
 
-> For implementers: execute task by task after implementation is requested. This turn authorizes a plan only. Read application/desktop/server/component instructions before editing the corresponding owners.
+> For implementers: this is the release plan and implementation checklist. Implementation was authorized earlier; the current request is to review and write the plan before resuming code changes. Read application/desktop/server/component instructions before editing the corresponding owners. Preserve existing uncommitted work.
+
+## แผนส่งมอบเวอร์ชันใหม่ — 2026-11-04
+
+### เป้าหมายและขอบเขต
+
+ผู้ใช้บรีฟหรือสั่งงานผ่านแชต → agent ใช้เครื่องมือสร้างไฟล์จริงใน Project → เปิดผลงานในแอปได้ → ขอแก้และทำต่อได้ โดยไม่ต้องคัดลอกโค้ด ดาวน์โหลดไฟล์ที่อยู่ในเครื่องแล้ว หรือติดตั้ง skill เอง
+
+คง Python Deep Agents เป็นแกน runtime และให้ Node/Electron ดูแลไฟล์ สิทธิ์ local config และงาน render ต่อไป งานรอบนี้คือเชื่อมความสามารถที่มีให้ทำงานครบตลอดเส้นทาง ไม่ใช่ย้าย framework อีกครั้ง ไม่เพิ่ม shell/terminal/browser automation ทั่วไปหรือ SaaS เข้ามาใน release นี้
+
+### สถานะที่ตรวจได้ตอนวางแผน
+
+- Git HEAD คือ `7eee12a` ซึ่งเป็นเอกสารแผนต่อจาก implementation `9f42eeb`; การมี commit เอกสารไม่ใช่การออก native release
+- มีโค้ดแก้ค้างใน HTML validator, production tools, chat hook/sidebar และ desktop CSS/dialog พร้อม regression `tests/html-preview-metadata.test.mts` ที่ยังไม่ commit ต้องตรวจและนำเข้าทีละ slice ไม่ทิ้งหรือถือว่าเสร็จแล้ว
+- Python Deep Agents มีอยู่แล้ว ไม่ต้องเริ่มย้ายจากศูนย์ ส่วนสถานะ native app ที่กำลังเปิดต้องตรวจใหม่ก่อนส่งมอบ ห้ามอนุมานจาก build หรือ Git HEAD
+- ปัญหา meta validation และพื้นหลัง dialog มีหลักฐานด้านล่าง ส่วนคำตอบเชิงสร้างสรรค์ที่ดีขึ้นต้องวัดจากโจทย์จริง แก้ prompt หรือลง SDK อย่างเดียวไม่ใช่หลักฐาน
+
+### ลำดับงานและจุดตรวจรับ
+
+| ลำดับ | ผลที่ผู้ใช้ต้องเห็น | งานและจุดตรวจรับ |
+| --- | --- | --- |
+| 0. ล็อก baseline | งานเดิมและข้อมูลเดิมยังอยู่ | จัดรายการ diff ค้าง, ระบุ app/build commit ที่เปิดจริง, ใช้ fixture แยกจากแชต/โฟลเดอร์ผู้ใช้; ตรวจ active run/draft ก่อน reload |
+| 1. สร้าง → เปิด → แก้ผลงาน | สั่งทำ HTML แล้วได้ไฟล์กับ preview ที่กดเปิดได้ | Task 0A: validator/error codes → verified artifact contract → scoped preview/source → chat/Files integration → HTML capture; ต้องผ่าน flow จริงครบก่อนเพิ่ม UI สถานะ |
+| 2. แสดงงานที่กำลังทำ | รู้ว่ากำลังอ่าน/เขียนไฟล์ไหน ตรวจภาพ หรือ render อยู่ | Tasks 1–2: host events, activity history, chat/Project spinner, Stop/late-event filtering; ชื่อและ progress มาจาก tool จริง |
+| 3. จัด Project และข้อมูลให้ถูก | ชื่อเริ่มจาก folder, เปลี่ยนชื่อ/source/output แล้วแชตและงานไม่หาย | Tasks 3–5: atomic native editor + run lease → stable app-owned working state/migration → compact dialog; ทดสอบ Cancel และ failed Save ก่อน success |
+| 4. เก็บบั๊ก UI และพฤติกรรม agent | ลบแชตถูกเป้าหมาย อ่านคำตอบง่าย ไม่แนะนำให้เซฟไฟล์เอง | Task 0B ทำได้หลัง slice 1: dialog surface/target/focus; ตรวจ Markdown และพื้นที่ชื่อไฟล์; capability context/creative rules และ scenario evaluation ตามรายการด้านล่าง |
+| 5. ออก native release | เปิดแอปรุ่นใหม่ที่มีการแก้จริงให้ทดลองได้ | Task 6: full regressions → package → actual native smoke → commit/push ตามสิทธิ์เดิม → เปิดแอปใหม่และตรวจ revision; cleanup เฉพาะ staging ที่ยืนยันว่าใช้สร้างใหม่ได้ |
+
+แต่ละ slice ต้องผ่าน contract/service/UI ที่เกี่ยวข้องและบันทึกหลักฐานก่อนเลื่อนไป slice ถัดไป ไม่จบงานที่เปลี่ยนข้อความหรือ spinner อย่างเดียว และไม่รายงานว่า release เสร็จก่อนตรวจแอปแพ็กเกจจริง
+
+### ข้อตกลงทางเทคนิคที่ต้องรักษา
+
+1. **ไฟล์และผลงานเป็นผลจาก host:** สร้างเสร็จเมื่อเขียนไฟล์สำเร็จแล้วเท่านั้น; preview เปิดได้เมื่อ validate/compile และลงทะเบียน scoped artifact แล้ว ข้อความ model ไม่มีสิทธิ์สร้าง path/URL หรือสถานะสำเร็จเอง
+2. **Preview ไม่อยู่ใน privileged DOM:** ใช้ trusted compiler และ surface ที่ isolate พร้อม host CSP/resource allowlist; ไม่ส่ง arbitrary HTML เข้า srcDoc แล้วถือว่าปลอดภัยเพราะมี sandbox เพียงอย่างเดียว ต้องตรวจ navigation, network และสิทธิ์ local assets ด้วย
+3. **Capture ไม่เปลี่ยนงานที่กำลังแก้:** การแปลง HTML เดิมเป็น PNG ต้องไม่ reset current draft, narration, voice tracks หรือ version selection; มี output/image reference ของตัวเอง และรักษาต้นฉบับไว้
+4. **แก้ directory เป็น transaction:** native picker เก็บค่าชั่วคราว; Save จึงเขียนพร้อมกัน; Cancel ไม่เปลี่ยน registry; host บล็อก path update ของ Project ที่กำลังทำงาน แม้ renderer ส่งคำขอตรง
+5. **ความต่อเนื่องผูกกับ ID:** ชื่อและ directory เปลี่ยนได้ แต่ Project/chat/asset/version identity คงเดิม; ย้าย app state ด้วยการ copy/validate แบบมีขอบเขตและไม่ลบต้นทาง
+6. **ขอบเขตสร้างสรรค์ซื่อสัตย์:** รองรับ declarative HTML/CSS/SVG และเครื่องมือ local ที่มีจริง; ไม่อ้างว่าแยกตัวละคร/สร้าง motion ทุกแบบจากภาพได้ หากเกินความสามารถต้องอธิบายข้อจำกัดและเสนอทางเลือกเฉพาะงาน
+
+### ตรวจพฤติกรรม agent ด้วยโจทย์เดียวกัน
+
+| โจทย์ | ผลที่ต้องได้ / สิ่งที่ห้ามเกิด |
+| --- | --- |
+| ขอไอเดียจากภาพแนบ แต่ยังไม่สั่งผลิต | ใช้ภาพจริงเมื่อ model รองรับ vision, แนะนำฉาก/จังหวะพร้อมเหตุผล, ไม่ render อัตโนมัติ |
+| บรีฟยังไม่ชัด | ถามเฉพาะเรื่องที่เปลี่ยนทิศทาง ไม่สัมภาษณ์ซ้ำเรื่องที่ผู้ใช้ตอบแล้ว |
+| บรีฟครบและบอกให้ทำ | ลงมือใช้ tool ต่อจนได้ผลงาน ไม่บังคับถาม/อนุมัติซ้ำทุกขั้น |
+| ขอ HTML ให้ดู | สร้างไฟล์ใน Project, แนบผลงานที่เปิดได้, เปิด preview สำหรับคำขอให้ดู; ไม่ทิ้ง code block ยาวแทนการทำงาน |
+| ขอเปิดไฟล์เดิม / แปลงเป็นภาพ | resolve ไฟล์จริง, เปิด viewer หรือคืน PNG จริง; ไม่แนะนำดาวน์โหลด/แคปจอเอง |
+| ขอเลือกแนวภาพ | เสนอตัวเลือกตามโจทย์พร้อมภาพจากงานจริงเมื่อจำเป็น ไม่บังคับ 4 แบบหรือแนวการ์ตูนตายตัว |
+| ขอเปลี่ยนเพียงจุดเดียว | อ่าน draft เดิม, รักษาทิศทางที่ตกลงและเวอร์ชันก่อนหน้า, ไม่ reset ฉาก/ตัวละคร/ความยาว |
+| ขอไม่มีเสียง / ขอใช้เสียงที่ตั้งไว้ | ใช้ค่าที่ขอและ config จริง; เสียงล้มเหลวต้องแจ้ง ไม่เปลี่ยนเป็นเงียบโดยไม่บอก |
+| save/render ล้มเหลวหรือกด Stop | แจ้งสาเหตุที่แยกประเภทได้, ไม่อ้างว่าสำเร็จ, ไม่มี event เก่ามาเปิด panel หรือฟื้น spinner |
+
+เริ่มจาก deterministic offline fixtures พิสูจน์ plumbing และผลไฟล์ จากนั้นแยกตรวจคุณภาพด้วย model/config ที่ผู้ใช้ใช้จริงเมื่อมีการทดลองที่ได้รับอนุญาต บันทึก input/model/settings/tool results/output และสิ่งที่ยังตรวจไม่ได้ ไม่กำหนดคำตอบสวยเพียงคำตอบเดียวเป็น expected output
+
+### ความสามารถถัดจาก release นี้
+
+คง research/Tavily และการขยายเนื้อหา skills เป็น backlog ที่แยกตรวจรับได้ ไม่ซ่อนอยู่ใต้คำว่า “harness เสร็จ” หลัง flow หลักผ่านแล้วจึงทำ:
+
+- Search/Extract tool ผ่าน host พร้อม URL ต้นทาง, credential configuration, timeout/result budget และ network boundary; ไม่มี key ให้แจ้งตรง ๆ ไม่แต่งผลค้นหา
+- คัด reference จาก legacy-animation แบบรักษาต้นฉบับ; ปรับ skills research/storytelling/storyboard/HTML animation/inspection ให้เป็นแนวทางตามงาน ไม่บังคับ template เดิม
+- ใช้ชุดโจทย์ข้างต้นเทียบผลก่อน/หลัง และทดสอบการแก้ต่อเนื่อง ไม่รับประกันความเก่งจากชื่อ SDK/model
+
+### เกณฑ์ออกเวอร์ชันและรายงานส่งมอบ
+
+- [ ] Slice 1–4 และ acceptance ด้านท้ายเอกสารมีหลักฐานผ่าน ไม่ใช้คำว่า partial แทนข้อบังคับที่ยังขาด
+- [ ] ทำ HTML → preview → PNG → silent MP4 → revision ได้ใน Project ทดสอบ; ตรวจ actual media decode/ภาพและเวลาตามงานที่เปลี่ยน
+- [ ] เปลี่ยน source/output, ปิด–เปิดแอป และเปิดไฟล์เก่าได้; draft/attachment/chat history ไม่หาย
+- [ ] Delete target/Cancel/Escape, สลับแชตระหว่าง run, Stop, narrow layout, light/dark และ focus ผ่าน
+- [ ] Unit/Python/API/UI/lint/build และ packaged native checks ตาม Task 6 ผ่าน หรือระบุ blocker จริงโดยไม่เรียก release complete
+- [ ] รายงาน commit, path ของ native app, revision ที่เปิดจริง, checks ที่ทำ, live-provider checks ที่ยังไม่ได้ทำ และข้อจำกัดที่เหลือ
+
+ไม่รับประกันเวลา “ไม่ถึงหนึ่งชั่วโมง” ก่อนพิสูจน์ migration และ isolated preview; ประเมินใหม่หลัง slice 1 ด้วยผลทดสอบจริง หากติดข้อจำกัดให้รายงานพร้อมหลักฐานและเดินงานอิสระที่เหลือต่อ
 
 Goal: repair HTML creation/preview and delete-chat confirmation, then show actual agent activity in chat/sidebar and provide a compact Project editor with folder-derived names and editable source/output directories.
 Architecture: trusted Node production tools emit small structured activity events using current request/session identity. React derives running/unread state without treating model prose as progress. Electron retains native directory selection and Project registry ownership; Project/chat identity survives name/path changes.
@@ -157,3 +229,14 @@ Tests: tests/ui/folder-projects.spec.ts; add tests/ui/project-editor.spec.ts.
 - Existing history, drafts, source files, original media and secrets remain intact. No live-provider quality claim follows from an offline test pass.
 
 Execution order: Task 0A repairs the core create-file/preview flow; Task 0B repairs delete confirmation; Tasks 1–2 deliver activity visibility; Tasks 3–4 establish the data/path contract; Task 5 assembles the accepted Project editor; Task 6 verifies the packaged product. No time guarantee is attached until state migration is exercised against synthetic old registries.
+
+## Implementation ledger — 2026-11-04
+
+- Implementing the approved plan in place on feat/local-render-runtime; the pre-existing edits belong to this task and are preserved.
+- Ruling: preview HTML is compiled in the worker, local raster assets are inlined after containment checks, and an opaque studio-preview protocol serves it under an additional sandbox/script-none CSP. The viewer iframe grants neither scripts nor same-origin. No arbitrary source srcDoc is introduced.
+- Ruling: capture_project_html is independent of saveHtml. It writes a unique PNG and returns a bounded inspection image without resetting the accepted animation or voice. HTML source versions use distinct design-N.html filenames.
+- Ruling: working drafts/assets are session-scoped in userData/project-state; skill enable preferences are shared at Project scope. Custom skill text remains in the selected source. Relink migrates known old state before changing the source binding, preserves originals, and refuses unsafe/corrupt input.
+- Tests observed red then green: file preview, production result publication/capture state preservation, activity reducer, atomic Project update, staged edit cancellation, state relink migration.
+- Initial verification: 80 Node tests, 13 Python tests, 7 focused UI tests, lint/build/API checks passed. Actual Python Deep Agents offline demo authored/inspected/revised/rendered a silent 3-second MP4. This is tool plumbing evidence, not a live model-quality claim. Final changes still require the final full checks/package/native inspection below.
+- Final fresh-context review identified and fixed draft containment after state relocation, run-start/registry-commit race, stale asynchronous auto-opening, legacy explicit-default output mismatch, and missing-source relink. Added failing regressions before fixes, then verified reopening production tools with migrated state, registry barrier/acquisition ordering, renamed-folder recovery, and deferred UI resolver cancellation.
+- Native version is 0.2.0; packaging records sourceRevision/version in runtime.json. About no longer incorrectly says native AI is disconnected/sample-only. No credentials were inspected or changed.

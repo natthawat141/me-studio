@@ -16,9 +16,9 @@ export function useWorkspaceFiles() {
     try {const next=await workspaceFiles().chooseFolder();if(next){generation.current++;setRoot(next);setFolders({[next.directory.id]:next});setExpanded({});setSelected(undefined);}}
     catch(error){setError(fileError(error));}finally{setPending(false);}
   }
-  async function activate(id:string) {
-    const version=++generation.current; setPending(true); setError(''); setRoot(undefined); setFolders({}); setExpanded({}); setSelected(undefined);
-    try { const listing=await workspaceFiles().activateProject({id}); if(version!==generation.current)return true; setRoot(listing); setFolders({[listing.directory.id]:listing}); return true; }
+  async function activate(id:string,preserveSelected=false) {
+    const version=++generation.current; setPending(true); setError('');
+    try { const listing=await workspaceFiles().activateProject({id}); if(version!==generation.current)return true; setRoot(listing); setFolders({[listing.directory.id]:listing});setExpanded({});if(!preserveSelected)setSelected(undefined); return true; }
     catch(error){if(version===generation.current)setError(fileError(error));return version!==generation.current;} finally{if(version===generation.current)setPending(false);}
   }
   function clear() { generation.current++; setPending(false); setRoot(undefined); setFolders({}); setExpanded({}); setSelected(undefined); setError(''); }
@@ -34,9 +34,9 @@ export function useWorkspaceFiles() {
     catch(error){if(version===generation.current)setError(fileError(error));}finally{if(version===generation.current)setPending(false);}
   }
   async function refresh() {
-    if(!root)return;setError('');setPending(true);
-    try{const listing=await workspaceFiles().listFolder({id:root.directory.id});setRoot(listing);setFolders({[listing.directory.id]:listing});setExpanded({});}
+    if(!root)return;const version=generation.current;setError('');setPending(true);
+    try{const listing=await workspaceFiles().listFolder({id:root.directory.id});if(version!==generation.current)return;setRoot(listing);setFolders({[listing.directory.id]:listing});setExpanded({});}
     catch(error){setError(fileError(error));}finally{setPending(false);}
   }
-  return {root,folders,expanded,selected,pending,error,choose,activate,clear,toggle,openFile,refresh,present:(file:WorkspacePreview)=>{generation.current++;setSelected(file);setPending(false);setError('');},closeFile:()=>{generation.current++;setSelected(undefined);setPending(false);}};
+  return {root,folders,expanded,selected,pending,error,selectionVersion:()=>generation.current,choose,activate,clear,toggle,openFile,refresh,present:(file:WorkspacePreview)=>{generation.current++;setSelected(file);setPending(false);setError('');},closeFile:()=>{generation.current++;setSelected(undefined);setPending(false);}};
 }
