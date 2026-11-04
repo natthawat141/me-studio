@@ -2,7 +2,7 @@
 
 > For implementers: execute task by task after implementation is requested. This turn authorizes a plan only. Read application/desktop/server/component instructions before editing the corresponding owners.
 
-Goal: show actual agent activity in chat/sidebar and provide a compact Project editor with folder-derived names and editable source/output directories.
+Goal: repair HTML creation/preview and delete-chat confirmation, then show actual agent activity in chat/sidebar and provide a compact Project editor with folder-derived names and editable source/output directories.
 Architecture: trusted Node production tools emit small structured activity events using current request/session identity. React derives running/unread state without treating model prose as progress. Electron retains native directory selection and Project registry ownership; Project/chat identity survives name/path changes.
 Tech stack: existing React/TypeScript, Base UI Dialog/DropdownMenu/Tooltip, Lucide, Electron IPC, Python Deep Agents, Node production tools. No new UI dependency.
 
@@ -28,6 +28,41 @@ Tech stack: existing React/TypeScript, Base UI Dialog/DropdownMenu/Tooltip, Luci
 - Source change updates the Files tree and next production request. Default output follows newSource/output; a custom output remains unchanged. Existing chats/artifacts remain accessible. Keep the previous Files selection if a relink fails.
 - Directory updates are blocked by the host while that Project has an active run. The dialog explains “รอให้งานจบ หรือหยุดงานก่อนเปลี่ยนโฟลเดอร์”; it never cancels work implicitly. Another Project may still be edited.
 - Default workspace remains app-managed for this slice; folder editing applies to directory Projects.
+
+## Priority fixes added after user testing — 2026-11-04
+
+These are pending implementation, not completed fixes. Complete Tasks 0A and 0B before the activity/sidebar and Project editor features below.
+
+Observed evidence:
+- Real save_html_animation attempts failed before writing scene.html. Replaying a failed HTML document with the packaged browser reproduced `page.evaluate: Error: HTML_ACTIVE_CONTENT`. The document contained ordinary `<meta charset="utf-8">`; removing only its metadata tag in an isolated diagnostic made the same preview succeed. The validator's allowed-element list excludes meta.
+- The bridge compares the whole exception message with safe error codes, so Playwright's prefixed error becomes generic TOOL_ERROR. The agent loses the actionable cause and falls back to inline code. A later write_project_file succeeded, but this does not create a preview artifact.
+- WorkspaceFiles classifies .html as text, and WorkspaceFilePreview renders it in a pre element. A file existing on disk therefore does not prove it can be previewed as animation in the app.
+- An isolated browser session with a synthetic chat reproduced the delete confirmation's transparent surface: computed background `rgba(0, 0, 0, 0)`. The light-theme owning CSS has no explicit dialog surface and the generic bg-popover token is not configured. Cancel preserved the synthetic chat. No real chat was deleted; no wrong-target deletion has been demonstrated.
+
+## Task 0A: Make HTML creation produce a real, openable preview
+
+Files: src/server/video/html-authoring.mts; src/server/video/production.mts; src/server/video/native-production.mts; src/server/agent/runtime.mts; desktop/main.mjs; desktop/preload.cjs; desktop/workspace-files.mjs; src/lib/workspace-files.ts; src/hooks/use-chat-prototype.ts; src/components/studio/desktop-screen.tsx; src/components/preview/workspace-panel.tsx and its owning CSS. Reuse existing scoped artifact/file services.
+Tests: create tests/html-preview.test.mts and tests/ui/html-preview.spec.ts; extend tests/creative-assets.test.mts and tests/python-agent.test.mts.
+
+1. Add failing regressions using synthetic full HTML documents with doctype, html/head/body, title, charset and viewport metadata. Verify benign metadata succeeds while meta refresh, script/event handlers and external resources remain blocked. Keep host-owned CSP/base URL authoritative; do not broadly allow arbitrary meta attributes.
+2. Normalize benign document metadata before compilation, and preserve structured safe validation codes across the browser/tool boundary. Test that the agent receives HTML_ACTIVE_CONTENT/HTML_EXTERNAL_RESOURCE with a bounded useful reason rather than a raw stack trace or generic TOOL_ERROR.
+3. Publish a typed HTML preview artifact only after the host has saved and validated the actual file. It carries an opaque scoped ID, a display name and verified preview capability; no model-invented path/URL is accepted. Return registered file references for explicit Project-file writes as well, distinguishing a saved source file from a validated preview.
+4. Add an isolated HTML preview surface using the existing trusted compiler and allowlisted local assets. Keep it outside the privileged app DOM; model scripts, arbitrary disk reads and outbound resource requests remain unavailable. Provide “ตัวอย่าง / โค้ด”; existing HTML files must pass validation before preview capability is granted. Show an actionable failure when unsupported HTML cannot be previewed.
+5. Connect a successful creation result to an openable chat artifact and automatic preview opening for an explicit “สร้าง/ทำ HTML ให้ดู” request. Do not automatically open arbitrary tool reads or restore a closed panel from a late/stopped request. Refresh an already-open Files tree after actual writes. Keep the user's draft/selection and previous accepted artifact on failure.
+6. Tighten the creative tool contract: ordinary creation requests use the save/preview tools and concise chat text; full code is appropriate when the user asks for code/explanation. A failed save or source-only write cannot be reported as a successfully opened preview. Do not fix this merely by hiding code blocks or telling the user to copy/save HTML manually.
+7. Verify an offline actual-SDK scenario that first receives a validation failure, corrects the HTML, saves a real file and returns a preview artifact. UI tests must open that artifact, observe rendered content/CSS motion, switch to source, reload/reopen the artifact and verify request/session scope and cancellation. Source-write success alone is insufficient acceptance.
+8. Run `node --import tsx --test tests/html-preview.test.mts tests/creative-assets.test.mts tests/python-agent.test.mts`, then production build and focused `PLAYWRIGHT_CHANNEL=chrome npm run test:ui -- tests/ui/html-preview.spec.ts`. Record failing-to-passing evidence before committing.
+
+## Task 0B: Restore the delete-chat confirmation surface
+
+Files: src/components/chat/chat-sidebar.tsx; src/components/studio/desktop-screen.css; src/components/studio/desktop-theme.css. Inspect src/components/ui/dialog.tsx and global tokens, but prefer the owning desktop styles for a narrow fix. Change deletion state logic only if a regression demonstrates a behavioral fault.
+Tests: extend tests/ui/folder-projects.spec.ts or add tests/ui/chat-delete-dialog.spec.ts.
+
+1. Add a failing appearance regression for the existing confirmation in light mode: nontransparent surface, readable text, contained buttons and responsive width. Cover dark mode as well; a dialog being visible is insufficient.
+2. Give the dialog an explicit theme-appropriate surface, subtle neutral boundary and restrained spacing. Preserve the requested thin visual style, backdrop and keyboard focus indicator. Do not add a thick white border or heavy shadow.
+3. With synthetic chats A and B, open A and choose B's delete action: the dialog must name B. Cancel/Escape must preserve both; confirming must remove only B and leave A active. Separately delete the active chat and verify fallback remains in the correct Project. Test long Thai names and a narrow viewport.
+4. Verify focus returns to a useful surviving control on Cancel/confirmation. When deleting a running synthetic chat, confirm request-scoped Stop and ignore subsequent late events; tests must not touch real user conversations.
+5. Run `PLAYWRIGHT_CHANNEL=chrome npm run test:ui -- tests/ui/folder-projects.spec.ts tests/ui/chat-delete-dialog.spec.ts` after production build, adjusting the command if coverage stays in the existing file. Inspect light/dark screenshots and commit the fix.
 
 ## Task 1: Define truthful activity events
 
@@ -107,6 +142,9 @@ Tests: tests/ui/folder-projects.spec.ts; add tests/ui/project-editor.spec.ts.
 
 ## Release acceptance
 
+- An ordinary request to create HTML saves a real scoped file and returns an in-app rendered preview without manual copying. Failed validation is actionable and never presented as successful creation.
+- HTML preview/source switching works with full documents and registered assets, preserves scope on reload, and cannot execute untrusted scripts in the app.
+- Delete confirmation has an opaque readable surface in both themes, names the selected target accurately and preserves unrelated chats. Cancel/Escape and confirmed deletion are verified with synthetic data.
 - User can identify the current real operation and affected working file without opening a source editor.
 - Sidebar makes running work discoverable across chats and shows completed unread results accurately.
 - A chosen folder provides a usable default Project name; custom names remain intentional and persistent.
@@ -114,4 +152,4 @@ Tests: tests/ui/folder-projects.spec.ts; add tests/ui/project-editor.spec.ts.
 - Source relink preserves conversation/draft/assets and earlier artifacts, while new production uses the new binding.
 - Existing history, drafts, source files, original media and secrets remain intact. No live-provider quality claim follows from an offline test pass.
 
-Execution order: Tasks 1–2 deliver visibility first; Tasks 3–4 establish the data/path contract; Task 5 assembles the accepted dialog; Task 6 verifies the packaged product. No time guarantee is attached until state migration is exercised against synthetic old registries.
+Execution order: Task 0A repairs the core create-file/preview flow; Task 0B repairs delete confirmation; Tasks 1–2 deliver activity visibility; Tasks 3–4 establish the data/path contract; Task 5 assembles the accepted Project editor; Task 6 verifies the packaged product. No time guarantee is attached until state migration is exercised against synthetic old registries.
