@@ -34,3 +34,21 @@ No handoff based solely on build/mock tests. Required: repeatable live tool flow
 - Independent read-only review requested fixes for timeout masking, Stop recovery and the persisted file limit, then approved the corrected implementation. No changes to provider endpoints, paid retries, production budgets or sandbox grants.
 
 Local detailed logs and media are ignored beneath .studio/release-fixes and .studio/stability-live. They are not shipped or committed. No credentials enter evidence or packaged resources.
+
+## Packaged 0.2.1 verification
+
+Code revision 54269e153eb2deafb2a3d8854ebb3c08fcc1cf43 is recorded in the packaged runtime.json. The PyInstaller SDK check and packaged worker/render smoke passed without host PATH tools. Frozen Python + real Meta Contributor completed five successive requests in one session: import synthetic image/save/inspect → targeted text revision/inspect → write Project preview.html/capture PNG → render/inspect MP4 → open preview.html. A deliberately invalid synthetic key returned MODEL_AUTH_ERROR; the following valid-key request succeeded. Request-scoped cancellation returned CANCELLED and released busy state.
+
+The actual MP4 fully decodes, is H.264 480x640, 72 frames/3.000 seconds, and carries a silent AAC track (max volume -91 dB), not generated speech. First/middle/last extracted frames were inspected; original synthetic WELCOME image and revised TEST TWO caption are present. The packaged resource scan found no environment files or credential-pattern text across 1,431 text files.
+
+Post-review Stop/reload regression and streaming tests passed (4/4); full pre-extension UI run was 51/51. The latest full Node run was 86/86, Python 21/21, lint/build/API passed, and both offline Python/legacy Pi demos completed. UI test setup initially asserted the reopened transcript before selecting its saved chat; that assertion was corrected to select the saved chat and explicitly check for a persistence error.
+
+The actual 0.2.1 application loaded existing chat history, used Contributor in a new synthetic Default workspace chat, created/inspected HTML and automatically opened its sandboxed preview. A following render request completed and delivered video.mp4 into both chat and the right player. The agent unnecessarily tried opening an absolute render path through the relative Project tool and was denied; the native artifact still opens automatically. This is a remaining wording/tool-choice issue, not a failed MP4 render. Native playback/seek and final reopen are being checked before handoff; do not equate the loaded player accessibility node with observed playback.
+
+Prior app 0.2.0 is preserved in release/rollback-0.2.0; private data/config were not migrated. Meta was added from the already-authorized local key for the native test, preserving other provider entries/defaults. Only synthetic content was sent for these tests. Recorded source/frozen-worker test usage totals 613,468 input and 23,342 output tokens before the final native UI requests (uncached list-price estimate USD 0.066, not an invoice; cached input may cost less). Primary pricing checked 2026-11-04: https://dev.meta.ai/models/muse-spark.
+
+Remaining boundaries: provider/network failures and creative quality remain provider-dependent; fixed budgets can still stop oversized work with a truthful reason and saved files. No crash replay, paid automatic retries, arbitrary code execution or broader filesystem grants were added. This unsigned arm64 build has not been tested on another Mac.
+
+## Handoff status
+
+The native UI control tool subsequently returned noWindowsAvailable and keyboard actions stopped changing focus. A text request to unlock/show me studio is pending. Native video playback/seek remains unverified; this candidate is not yet declared stable or ready for user acceptance. The packaged worker MP4 and native chat creation/render results above are verified separately. Do not claim a successful click or buffering accessibility node proves playback.
