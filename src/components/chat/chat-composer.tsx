@@ -1,4 +1,5 @@
 'use client';
+import {useLocale} from '@/components/studio/locale';
 
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUp, Check, ChevronDown, Paperclip, Plus, Settings2, Square, Upload, X } from 'lucide-react';
@@ -19,6 +20,7 @@ type Props = {
   providers: ChatProvider[]; selected: string; onSelect: (id: string) => void; onSettings: () => void;
 };
 export function ChatComposer(props: Props) {
+  const {t}=useLocale();
   const composer=useRef<HTMLDivElement>(null);
   const submitting=useRef(false);
   const focusedThread=useRef<string|undefined>(undefined);
@@ -79,28 +81,28 @@ export function ChatComposer(props: Props) {
   }
   return <FileUpload onFilesAdded={addFiles} accept="image/*,video/*,audio/*,.txt,.md,.json,.html,.css,.js,.ts,.tsx,.py,.yaml,.yml,.csv,.svg" disabled={props.disabled||importing}>
     <PromptInput ref={composer} data-thread-id={props.threadId} value={props.value} onValueChange={value=>{setCommandsHidden(false);setCommandIndex(0);props.onChange(value);}} onKeyDownCapture={e=>{if(!commands.length||e.nativeEvent.isComposing||e.keyCode===229)return;if(e.key==='Escape'){e.preventDefault();e.stopPropagation();setCommandsHidden(true);}if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();e.stopPropagation();setCommandIndex(i=>(i+(e.key==='ArrowDown'?1:-1)+commands.length)%commands.length);}if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();e.stopPropagation();if(!e.repeat)chooseCommand(commands[activeCommand].command);}}} onSubmit={()=>void submit()} disabled={props.disabled||importing} className="chat-composer" maxHeight={180}>
-      {!!commands.length&&<div className="composer-commands" role="listbox" aria-label="คำสั่งในแชต">{commands.map((item,i)=><button type="button" role="option" aria-selected={i===activeCommand} key={item.command} onMouseEnter={()=>setCommandIndex(i)} onClick={()=>chooseCommand(item.command)}><code>{item.command}</code><span>{item.label}<small>{item.description}</small></span></button>)}</div>}
-      {!!files.length && <div className="composer-files" aria-label="ไฟล์ที่แนบในร่าง">{files.map((file, index) => <DraftAttachment file={file} key={`${file.name}-${file.lastModified}-${index}`} disabled={importing} onRemove={()=>setFiles(files.filter((_,i)=>i!==index))}/>)}</div>}
+      {!!commands.length&&<div className="composer-commands" role="listbox" aria-label={t("Chat commands","คำสั่งในแชต")}>{commands.map((item,i)=><button type="button" role="option" aria-selected={i===activeCommand} key={item.command} onMouseEnter={()=>setCommandIndex(i)} onClick={()=>chooseCommand(item.command)}><code>{item.command}</code><span>{t(item.labelEn,item.label)}<small>{t(item.descriptionEn,item.description)}</small></span></button>)}</div>}
+      {!!files.length && <div className="composer-files" aria-label={t("Draft attachments","ไฟล์ที่แนบในร่าง")}>{files.map((file, index) => <DraftAttachment file={file} key={`${file.name}-${file.lastModified}-${index}`} disabled={importing} onRemove={()=>setFiles(files.filter((_,i)=>i!==index))}/>)}</div>}
       {error && <p className="composer-error" role="alert">{error}</p>}
-      {importing&&<span className="sr-only" role="status">{files.length?'กำลังแนบไฟล์…':'กำลังส่งข้อความ…'}</span>}
-      <PromptInputTextarea aria-label="ข้อความถึงผู้ช่วย" placeholder="อยากสร้างอะไรวันนี้?" maxLength={8000} onPaste={event=>{const pasted=Array.from(event.clipboardData.files);if(pasted.length){event.preventDefault();addFiles(pasted);}}}/>
+      {importing&&<span className="sr-only" role="status">{files.length?t("Attaching files…","กำลังแนบไฟล์…"):t("Sending message…","กำลังส่งข้อความ…")}</span>}
+      <PromptInputTextarea aria-label={t("Message assistant","ข้อความถึงผู้ช่วย")} placeholder={t("What would you like to create?","อยากสร้างอะไรวันนี้?")} maxLength={8000} onPaste={event=>{const pasted=Array.from(event.clipboardData.files);if(pasted.length){event.preventDefault();addFiles(pasted);}}}/>
       <PromptInputActions className="composer-actions">
-        <FileUploadTrigger asChild><button className="chat-icon" aria-label="แนบไฟล์" title="แนบภาพ วิดีโอ หรือเสียง" disabled={props.disabled}><Plus size={21} strokeWidth={1.6} /></button></FileUploadTrigger>
+        <FileUploadTrigger asChild><button className="chat-icon" aria-label={t("Attach files","แนบไฟล์")} title={t("Attach images, video, or audio","แนบภาพ วิดีโอ หรือเสียง")} disabled={props.disabled}><Plus size={21} strokeWidth={1.6} /></button></FileUploadTrigger>
         <div className="composer-spacer" />
         <DropdownMenu>
-          <DropdownMenuTrigger render={<button className="model-picker" aria-label="เลือกโมเดล" disabled={props.disabled} />}>
-            <span>{props.catalog?(nativeSelected?.label||'เลือกโมเดล'):selected?.modelLabel || selected?.modelId || 'เลือกโมเดล'}</span><ChevronDown size={14} />
+          <DropdownMenuTrigger render={<button className="model-picker" aria-label={t("Choose model","เลือกโมเดล")} disabled={props.disabled} />}>
+            <span>{props.catalog?(nativeSelected?.label||t("Choose model","เลือกโมเดล")):selected?.modelLabel || selected?.modelId || t("Choose model","เลือกโมเดล")}</span><ChevronDown size={14} />
           </DropdownMenuTrigger>
           <DropdownMenuContent side="top" align="end" className="chat-menu model-menu">
-            {props.catalog?availableModels.map(m=><DropdownMenuItem key={`${m.provider}:${m.id}`} onClick={()=>props.onSelectModel?.({provider:m.provider,model:m.id})}><span className="model-item"><span>{m.label}</span><small>{m.providerName}</small></span>{nativeSelected===m&&<Check size={15}/>}</DropdownMenuItem>):props.providers.map(p => <DropdownMenuItem key={p.id} onClick={() => props.onSelect(p.id)}><span className="model-item"><span>{p.name}</span><small>{p.modelLabel || p.modelId || 'ยังไม่เลือกโมเดล'}</small></span>{p.id === props.selected && <Check size={15} />}</DropdownMenuItem>)}
-            <DropdownMenuSeparator /><DropdownMenuItem onClick={props.onSettings}><Settings2 size={16} />{props.catalog?'จัดการโมเดล':'ตั้งค่าผู้ให้บริการ'}</DropdownMenuItem>
+            {props.catalog?availableModels.map(m=><DropdownMenuItem key={`${m.provider}:${m.id}`} onClick={()=>props.onSelectModel?.({provider:m.provider,model:m.id})}><span className="model-item"><span>{m.label}</span><small>{m.providerName}</small></span>{nativeSelected===m&&<Check size={15}/>}</DropdownMenuItem>):props.providers.map(p => <DropdownMenuItem key={p.id} onClick={() => props.onSelect(p.id)}><span className="model-item"><span>{p.name}</span><small>{p.modelLabel || p.modelId || t("No model selected","ยังไม่เลือกโมเดล")}</small></span>{p.id === props.selected && <Check size={15} />}</DropdownMenuItem>)}
+            <DropdownMenuSeparator /><DropdownMenuItem onClick={props.onSettings}><Settings2 size={16} />{props.catalog?t("Manage models","จัดการโมเดล"):t("Provider settings","ตั้งค่าผู้ให้บริการ")}</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        {props.catalog&&props.onReasoning&&props.selection?.provider!=='meta'&&<DropdownMenu><DropdownMenuTrigger render={<button className="model-picker" aria-label="ระดับการคิด" disabled={props.disabled||props.busy}/>}>{({auto:'Auto',low:'Low',medium:'Medium',high:'High'})[props.catalog.reasoning||'auto']}<ChevronDown size={12}/></DropdownMenuTrigger><DropdownMenuContent side="top" align="end" className="chat-menu">{(['auto','low','medium','high'] as const).map(e=><DropdownMenuItem key={e} onClick={()=>props.onReasoning?.(e)}>{({auto:'อัตโนมัติ',low:'น้อย',medium:'ปานกลาง',high:'มาก'})[e]}{(props.catalog?.reasoning||'auto')===e&&<Check size={14}/>}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>}
-        {props.pending ? <button className="composer-send" aria-label="หยุดตอบ" onClick={props.onStop}><Square size={13} fill="currentColor" /></button> : <button className="composer-send" aria-label="ส่งข้อความ" onClick={()=>void submit()} disabled={props.disabled || props.busy || importing || (!props.value.trim() && !files.length)}><ArrowUp size={20} strokeWidth={1.8} /></button>}
+        {props.catalog&&props.onReasoning&&props.selection?.provider!=='meta'&&<DropdownMenu><DropdownMenuTrigger render={<button className="model-picker" aria-label={t("Reasoning level","ระดับการคิด")} disabled={props.disabled||props.busy}/>}>{({auto:'Auto',low:'Low',medium:'Medium',high:'High'})[props.catalog.reasoning||'auto']}<ChevronDown size={12}/></DropdownMenuTrigger><DropdownMenuContent side="top" align="end" className="chat-menu">{(['auto','low','medium','high'] as const).map(e=><DropdownMenuItem key={e} onClick={()=>props.onReasoning?.(e)}>{({auto:'อัตโนมัติ',low:'น้อย',medium:'ปานกลาง',high:'มาก'})[e]}{(props.catalog?.reasoning||'auto')===e&&<Check size={14}/>}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>}
+        {props.pending ? <button className="composer-send" aria-label={t("Stop","หยุดตอบ")} onClick={props.onStop}><Square size={13} fill="currentColor" /></button> : <button className="composer-send" aria-label={t("Send message","ส่งข้อความ")} onClick={()=>void submit()} disabled={props.disabled || props.busy || importing || (!props.value.trim() && !files.length)}><ArrowUp size={20} strokeWidth={1.8} /></button>}
       </PromptInputActions>
     </PromptInput>
-    <FileUploadContent className="chat-drop"><div><Upload size={30} strokeWidth={1.4} /><strong>วางไฟล์เพื่อแนบในแชต</strong><span>ภาพ วิดีโอ หรือเสียง · ไม่เกิน 25 MB ต่อไฟล์</span></div></FileUploadContent>
+    <FileUploadContent className="chat-drop"><div><Upload size={30} strokeWidth={1.4} /><strong>{t("Drop files to attach","วางไฟล์เพื่อแนบในแชต")}</strong><span>{t("Images, video, or audio · up to 25 MB per file","ภาพ วิดีโอ หรือเสียง · ไม่เกิน 25 MB ต่อไฟล์")}</span></div></FileUploadContent>
   </FileUpload>;
 }
 function DraftAttachment({file,onRemove,disabled}:{file:File;onRemove:()=>void;disabled:boolean}){

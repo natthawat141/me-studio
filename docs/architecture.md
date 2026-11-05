@@ -41,6 +41,8 @@ Optional validated settings on each Project: confirmation policy (always or paid
 
 Desktop Project directory settings persist the chosen source and output directories through native pickers. Source controls the current read-only Files tree. Configured native generation writes immutable versions under the selected output directory; unconfigured sample chat does not write there.
 
+File reveal/save actions resolve opaque preview grants in main and recheck canonical paths before calling Finder or copying. Renderer requests cannot provide source/destination paths. The native destination-folder picker grants a destination for one copy; writes are exclusive and size bounded. The worker receives the host Downloads directory as a startup argument; `save_file_to_downloads` resolves a generated ID in the current conversation and writes a numbered copy there without overwriting. Exported copies join that conversation's generated registry; they are not automatically embedded as a second video.
+
 ## Video harness V1 (current; supersedes early frontend-only scope above)
 
 Desktop is a conversational creative agent with optional directory Projects. Local config.env selects OpenAI/OpenRouter models and ElevenLabs voice settings; model visibility is editable in Settings. Python can discuss a brief, present clickable choices, author original HTML/CSS/SVG animation, share real previews, restore per-chat versions and render MP4. Native unconfigured sends preserve the draft and request configuration. Browser-only previews remain labelled samples. See [video harness](docs/video-harness.md) for exact capability and verification boundaries.

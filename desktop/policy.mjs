@@ -4,6 +4,10 @@ export function trustedSender(url, mainFrame) {
   try { return mainFrame && new URL(url).origin === APP_ORIGIN; } catch { return false; }
 }
 
+export function allowDesktopPermission(contents, owner, permission, details) {
+  return Boolean(owner && contents === owner && permission === 'fullscreen' && trustedSender(details?.requestingUrl, details?.isMainFrame === true));
+}
+
 export function runtimeEnvironment(parent = process.env) {
   const allowed = ['HOME', 'USER', 'LOGNAME', 'TMPDIR', 'LANG', 'LC_ALL', 'SystemRoot', 'WINDIR', 'TEMP', 'TMP'];
   return Object.fromEntries(allowed.filter(key => parent[key] !== undefined).map(key => [key, parent[key]]));

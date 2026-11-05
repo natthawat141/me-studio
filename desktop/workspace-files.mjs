@@ -53,6 +53,14 @@ export class WorkspaceFiles {
     }else if(result.kind!=='unsupported')result.src=`studio-file://${id}/${encodeURIComponent(value.entry.name)}`;
     return result;
   }
+  // Host-only: resolve an opaque grant again immediately before the OS action.
+  async pathForReveal(id){
+    const original=this.#entries.get(id);if(!original)throw Error('INVALID_FILE');
+    const value=await this.#resolve(id);
+    if(value.path!==original.path)throw Error('FILE_OUTSIDE_FOLDER');
+    if(!value.info.isFile())throw Error('INVALID_FILE');
+    return value.path;
+  }
   async serve(request){
     let value;try{const url=new URL(request.url);if(url.protocol!=='studio-file:')throw new Error();value=await this.#resolve(url.hostname);}catch{return new Response(null,{status:404});}
     const type=media[extname(value.path).toLowerCase()];if(!type||!value.info.isFile())return new Response(null,{status:404});

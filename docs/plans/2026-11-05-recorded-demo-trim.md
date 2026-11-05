@@ -1,0 +1,9 @@
+# Recorded Meta demo and cross-message trimming
+
+The native GUI demo exposed INVALID_TRIM when a later message tried to cut a completed film. Production tools are recreated per request, so lastArtifact was empty although the scoped generated-files registry still contained the film.
+
+The regression reproduced the failure before the change. Trimming now resolves a published video ID (or the latest valid video in this chat), probes its actual duration/audio and creates a separate cut. Arbitrary paths are not accepted. The regression covers reopening, exact original selection after another cut, invalid duration, unknown ID, preserved source bytes and audible-stream presence.
+
+Demo uses a fictional English bakery cash-flow story, generated through the native app with Meta. Screen captures are real interactions; final editing will shorten generation waits and join separately recorded takes. No hackathon submission is performed.
+
+Verification: regression failed with INVALID_TRIM before the fix and passed after it; npm test passed 100/100 with no skips; lint and full desktop build passed. Packaged native GUI: Meta Muse Spark 1.3 Contributor selected; next-message trimming produced and opened a 15.000-second 720x1280 H.264/AAC cut, copied to Downloads and played to 0:15. Show in Finder selected the actual file. Original full-film copy matches its source SHA-256. Final demo exported to Downloads/me-studio-Meta-Demo-English.mp4: 169 seconds, 1920x1080 H.264/AAC. Actual GUI takes were edited with declared shortened waits, English demo narration, the original generated MP4 as a labelled output showcase, and the actual GUI teaser playback. Decode and representative frames checked. QuickTime opened and played the export. No external upload/submission was performed. Raw takes, edit script and timeline ledger remain in Movies/me-studio-meta-demo.

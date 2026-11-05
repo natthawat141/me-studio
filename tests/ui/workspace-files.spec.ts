@@ -7,6 +7,8 @@ async function installFiles(page: Page) {
     const video = { id: 'clip', name: 'greeting.mp4', relativePath: 'scenes/greeting.mp4', kind: 'file' as const, previewKind: 'video' as const };
     const source = { id: 'source', name: 'scene.html', relativePath: 'scene.html', kind: 'file' as const, previewKind: 'text' as const };
     window.meStudioFiles = {
+      revealFile:async({id})=>{sessionStorage.setItem('revealedFile',id);return {revealed:true};},
+      saveFileCopy:async({id,destination})=>{sessionStorage.setItem('copiedFile',id);sessionStorage.setItem('copyDestination',destination??'choose');return {saved:true};},
       projects: async () => [], pickProjectFolder: async () => null, createProject: async () => ({id:'project',name:'test'}), relinkProject: async () => null, activateProject: async () => ({ directory: root, entries: [folder, source], truncated: false }),
       chooseFolder: async () => ({ directory: root, entries: [folder, source], truncated: false }),
       listFolder: async ({ id }) => id === 'scenes'
@@ -32,6 +34,13 @@ test('selected-folder tree opens media beside chat and preserves draft and folde
   await page.getByRole('treeitem', { name: 'greeting.mp4', exact: true }).click();
   await expect(panel.locator('video')).toHaveJSProperty('readyState', 4);
   await expect(panel.locator('video')).toHaveAttribute('controls', '');
+  await panel.getByRole('button',{name:'แสดงใน Finder',exact:true}).click();
+  expect(await page.evaluate(()=>sessionStorage.getItem('revealedFile'))).toBe('clip');
+  await panel.getByRole('button',{name:'บันทึกสำเนา…',exact:true}).click();
+  await page.getByRole('menuitem',{name:'บันทึกลง Downloads',exact:true}).click();
+  expect(await page.evaluate(()=>sessionStorage.getItem('copiedFile'))).toBe('clip');
+  expect(await page.evaluate(()=>sessionStorage.getItem('copyDestination'))).toBe('downloads');
+  await expect(panel.getByRole('status')).toContainText('บันทึกสำเนาแล้ว');
   // Native media uses range responses; browser fixture verifies the same player can seek.
   await panel.locator('video').evaluate((video: HTMLVideoElement) => { video.currentTime = 3; });
   await expect.poll(() => panel.locator('video').evaluate((video: HTMLVideoElement) => video.currentTime)).toBeGreaterThanOrEqual(3);

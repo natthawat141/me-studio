@@ -41,4 +41,6 @@ contextBridge.exposeInMainWorld('meStudioFiles',Object.freeze({
   activateProject:input=>fileRequest('activate',input),
   listFolder:input=>fileRequest('list',input),
   openFile:input=>fileRequest('open',input),
+  revealFile:input=>fileRequest('reveal',input),
+  saveFileCopy:input=>fileRequest('saveCopy',input),
 }));

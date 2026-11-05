@@ -1,4 +1,5 @@
 'use client';
+import {useLocale} from '@/components/studio/locale';
 import {productionFailureText} from '@/lib/production-errors';
 import {reduceActivity,activityLabel,type Activity} from '@/lib/production-activity';
 
@@ -10,6 +11,7 @@ import type { ChatFileRef } from '@/lib/workspace-files';
 import { commitChatMessage, createChatDraft, restoreChatDrafts } from '@/lib/chat-drafts';
 
 export function useChatPrototype() {
+  const {t,locale}=useLocale();
   const [state, setState] = useState<ChatPrototypeState>(initialChatState);
   const [activeId, updateActiveId] = useState('new');
   function setActiveId(id:string){visibleId.current=id;updateActiveId(id);setState(s=>({...s,threads:s.threads.map(t=>t.id===id?{...t,unread:false}:t)}));}
@@ -31,11 +33,11 @@ export function useChatPrototype() {
       const text=request.streamed;
       setState(s=>({...s,threads:s.threads.map(t=>t.id===request.sessionId?{...t,messages:t.messages.some(m=>m.id===request.assistantId)?t.messages.map(m=>m.id===request.assistantId?{...m,text}:m):[...t.messages,{id:request.assistantId,role:'assistant',text}]}:t)}));
     }
-    if(event.type==='activity'){setActivities(s=>({...s,[request.sessionId]:reduceActivity(s[request.sessionId]??[],event)}));if(event.status==='started'&&event.action){const rows=reduceActivity([],event);if(rows[0])setProductionStage({sessionId:request.sessionId,text:'กำลัง'+activityLabel(rows[0])});}else setProductionStage(undefined);}
-    if(event.type==='tool_start')setProductionStage({sessionId:request.sessionId,text:event.name==='render_video'?'กำลังเรนเดอร์วิดีโอ':event.name==='inspect_animation'?'กำลังตรวจภาพผลงาน':event.name==='save_html_animation'?'กำลังสร้าง HTML และภาพตัวอย่าง':event.name==='capture_project_html'?'กำลังแปลง HTML เป็นภาพ':event.name==='write_project_file'?'กำลังบันทึกไฟล์ใน Project':'กำลังทำงาน'});
+    if(event.type==='activity'){setActivities(s=>({...s,[request.sessionId]:reduceActivity(s[request.sessionId]??[],event)}));if(event.status==='started'&&event.action){const rows=reduceActivity([],event);if(rows[0])setProductionStage({sessionId:request.sessionId,text:locale==='en'?activityLabel(rows[0],locale):'กำลัง'+activityLabel(rows[0])});}else setProductionStage(undefined);}
+    if(event.type==='tool_start')setProductionStage({sessionId:request.sessionId,text:event.name==='render_video'?t('Rendering video','กำลังเรนเดอร์วิดีโอ'):event.name==='inspect_animation'?t('Inspecting the result','กำลังตรวจภาพผลงาน'):event.name==='save_html_animation'?t('Creating HTML and preview','กำลังสร้าง HTML และภาพตัวอย่าง'):event.name==='capture_project_html'?t('Capturing HTML as an image','กำลังแปลง HTML เป็นภาพ'):event.name==='write_project_file'?t('Saving file in project','กำลังบันทึกไฟล์ใน Project'):t('Working','กำลังทำงาน')});
     if(event.type==='tool_end')setProductionStage(undefined);
-    if(event.type==='render')setProductionStage({sessionId:request.sessionId,text:'กำลังเรนเดอร์วิดีโอ'+(event.completed!==undefined&&event.total?' '+event.completed+'/'+event.total+' เฟรม':'')});
-  }),[]);
+    if(event.type==='render')setProductionStage({sessionId:request.sessionId,text:t('Rendering video','กำลังเรนเดอร์วิดีโอ')+(event.completed!==undefined&&event.total?' '+event.completed+'/'+event.total+t(' frames',' เฟรม'):'')});
+  }),[t,locale]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     queueMicrotask(() => {
@@ -96,7 +98,9 @@ export function useChatPrototype() {
     const id=active.id,text=(textOverride??active.draft).trim()||'ช่วยดูไฟล์ที่แนบให้หน่อย',requestId=crypto.randomUUID();setPendingId(id);
     const userMessageId=crypto.randomUUID(),assistantId=crypto.randomUUID();
     resultRequest.current=requestId;nativeRequest.current={requestId,sessionId:id,assistantId,userId:userMessageId,streamed:''};
-    const references=files.length?files:[...active.messages].reverse().find(m=>m.role==='user'&&m.files?.length)?.files??[];
+    const currentReferences=files.length?files:[...active.messages].reverse().find(m=>m.role==='user'&&m.files?.length)?.files??[];
+    const earlierAudio=active.messages.filter(m=>m.role==='user').flatMap(m=>m.files??[]).filter(f=>f.kind==='audio');
+    const references=[...new Map([...earlierAudio,...currentReferences].map(f=>[f.id,f])).values()].slice(-10);
     setState(s=>{const next=commitChatMessage(s,active,{id:userMessageId,role:'user',text,delivery:'sent',...(files.length?{files}:{})});return textOverride?{...next,threads:next.threads.map(t=>t.id===id?{...t,draft:active.draft}:t)}:next;});
     void window.meStudioFiles.produceVideo({projectId,sessionId:id,requestId,text,attachments:references.map(f=>({id:f.id})),...selection}).then(result=>{
       if(stoppedRequests.current.has(requestId)){

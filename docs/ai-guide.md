@@ -51,7 +51,7 @@ Native agent-capable chat refreshes worker credential status before every text s
 
 ## Collaborative creation
 
-User intent and references govern direction. Expertise helps explain choices and execute well; it must not impose a fixed cast, duration, style or universal approval sequence. Slash commands are optional discovery shortcuts. Skills are bundled creative capabilities with project-specific enable/disable preferences. Working HTML/JSON are internal unless requested. Native sends include bounded image inputs and plain text references for the selected model; vision support depends on that model. Audio/video remain view-only.
+User intent and references govern direction. Expertise helps explain choices and execute well; it must not impose a fixed cast, duration, style or universal approval sequence. Slash commands are optional discovery shortcuts. Skills are bundled creative capabilities with project-specific enable/disable preferences. Working HTML/JSON are internal unless requested. Native sends include bounded image inputs and plain text references for the selected model; vision support depends on that model. Uploaded audio can be measured and included in the final MP4 using list_audio_assets/set_audio_track; earlier attachments remain available across turns. Audio listening/transcription and automatic word timing remain unavailable. Video attachments remain view-only.
 
 ## Native creative configuration (2026-11-03)
 

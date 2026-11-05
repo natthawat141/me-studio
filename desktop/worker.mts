@@ -14,7 +14,7 @@ import { createStudioHarness } from '../src/server/agent/pi-runtime.mjs';
 import { createMetaProvider, META_MODELS } from '../src/server/agent/meta-provider.mjs';
 import type { AgentTool } from '@earendil-works/pi-agent-core';
 
-const [resources, data] = process.argv.slice(2);
+const [resources, data, downloads] = process.argv.slice(2);
 const projects = new DesktopProjects(join(data, 'projects'), join(resources, 'examples/local-render'));
 const store = new StudioMemoryStore(join(data, 'memory.sqlite'));
 const id = z.string().uuid();
@@ -29,7 +29,7 @@ const sessions = new Map<string, string>();
 const event = (value: unknown) => process.send?.({ event: value });
 const result = (value: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(value) }], details: {} });
 
-const production=createNativeProduction(resources,data,store,tools,event);
+const production=createNativeProduction(resources,data,store,tools,event,downloads);
 
 async function artifacts(projectId: string) {
   const root = join(await projects.checkedDirectory(projectId), 'renders');

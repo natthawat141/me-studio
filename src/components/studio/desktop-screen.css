@@ -109,6 +109,14 @@ body:has(.chat-app) { background:transparent; --focus-outline:#858b95; }
 .chat-file-link svg { flex-shrink:0; opacity:.7; }
 .chat-file-link:hover { background:#24272d06; }
 .chat-file-link:disabled { opacity:.5; cursor:default; }
+.chat-file-row { display:flex; align-items:center; gap:3px; min-width:0; }
+.chat-file-row>.chat-file-link { flex:1; min-width:0; }
+.chat-file-row>.chat-file-action { width:26px; height:28px; flex-shrink:0; border-radius:6px; margin-top:6px; }
+.chat-created-files .chat-file-action { margin-top:0; }
+.message-user .chat-local-file:has(.chat-inline-image) .chat-file-row { flex-wrap:wrap; }
+.message-user .chat-local-file:has(.chat-inline-image) .chat-file-link { flex-basis:100%; }
+.message-user .chat-local-file:has(.chat-inline-image) .chat-file-action { margin-top:0; }
+.chat-local-file>small[role="status"] { color:var(--chat-muted); }
 .chat-local-file>small,.chat-inline-artifact>small { display:block; color:#92969e; font-size:11px; }
 .chat-created-files { display:flex; flex-direction:column; gap:2px; margin-top:10px; }
 .chat-created-files .chat-file-link { border:0; padding:6px 9px; margin:0; }

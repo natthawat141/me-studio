@@ -35,5 +35,7 @@ export interface WorkspaceFilesBridge {
   chooseFolder(): Promise<WorkspaceListing | null>;
   listFolder(input: { id: string }): Promise<WorkspaceListing>;
   openFile(input: { id: string }): Promise<WorkspacePreview>;
+  revealFile?(input: { id: string }): Promise<{revealed:boolean}>;
+  saveFileCopy?(input: { id: string;destination?:'downloads'|'choose' }): Promise<{saved:boolean}>;
 }
 declare global { interface Window { meStudioFiles?: WorkspaceFilesBridge } }

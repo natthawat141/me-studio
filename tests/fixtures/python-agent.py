@@ -32,6 +32,10 @@ class ScriptedProvider:
             output=[call('write_project_file',{'path':'preview.html','text':'<main>Saved before failure</main>'})]
         elif user in ("provider_error","partial_failure"):
             raise RuntimeError("SECRET_PROVIDER_BODY sk-never-forward-this-secret")
+        elif user == "audio_error" and self.step == 1:
+            output = [call("set_audio_track", {"id": "33333333-3333-4333-8333-333333333333"})]
+        elif user == "policy_probe":
+            output = [text("policy-ok" if "Thai-first" not in system and "Reply in the language" in system and "English" in system and "2D cartoon" in system and "reference" in system else "policy-missing")]
         elif user == "prior":
             output = [text("legacy restored" if any(m.get("content") == "legacy answer" for m in messages) and "Milo" in system else "missing")]
         elif user == "wait":

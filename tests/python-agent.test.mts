@@ -4,6 +4,7 @@ import {mkdtemp,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {createStudioHarness} from '../src/server/agent/runtime.mjs';
+import {productionInstructions} from '../src/server/video/production.mjs';
 import {createStudioHarness as createPiHarness} from '../src/server/agent/pi-runtime.mjs';
 import {call,offlineModel,reply,scriptedStream} from '../scripts/local/offline-provider.mjs';
 import {StudioMemoryStore} from '../src/server/memory/store';
@@ -70,4 +71,16 @@ test('bounded multimodal payload crosses actual JSONL without storing image byte
  assert.ok(!JSON.stringify(store.readTranscript(session)).includes('data:image/'));
  assert.equal((await harness(store).run(run)).replayed,true);
  await assert.rejects(harness(store).run({...run,media:[media[0]]}),/REQUEST_CONFLICT/);
+}));
+
+test('creative model receives language-following policy and flexible illustration directions',async()=>fixture(async store=>{
+ const result=await harness(store,{instructions:productionInstructions}).run({requestId:'policy-test',text:'policy_probe'});
+ assert.equal(result.result,'policy-ok');
+}));
+
+test('audio duration errors cross Python bridge as actionable codes rather than generic failures',async()=>fixture(async store=>{
+ const tool={name:'set_audio_track',label:'Soundtrack',description:'Use attached audio',parameters:{type:'object',properties:{id:{type:'string'}},required:['id']},execute:async()=>{throw Error('AUDIO_EXCEEDS_TIMELINE');}};
+ const result=await harness(store,{tools:[tool]}).run({requestId:'audio-error',text:'audio_error',approvedTools:['set_audio_track']});
+ assert.equal(result.status,'completed');
+ assert.match(JSON.stringify(store.readTranscript(session).filter(m=>m.role==='toolResult')),/AUDIO_EXCEEDS_TIMELINE/);
 }));

@@ -16,10 +16,14 @@ test('selected folder lists lazily, hides dotfiles, rejects forged IDs and escap
     await assert.rejects(service.list('../../outside'),/INVALID_FILE/);
     const listing=await service.list(folder.entries[0].id);
     const file=await service.preview(listing.entries[0].id);
+    assert.equal(await service.pathForReveal(file.entry.id),await (await import('node:fs/promises')).realpath(join(root,'output','clip.mp4')));
+    await assert.rejects(service.pathForReveal(folder.directory.id),/INVALID_FILE/);
+    await assert.rejects(service.pathForReveal(join(root,'output','clip.mp4')),/INVALID_FILE/);
     assert.equal(file.kind,'video'); assert.ok(file.src); assert.match(file.src,/^studio-file:\/\//);
     assert.ok(!JSON.stringify(folder).includes(root));
     await rm(join(root,'output','clip.mp4')); await symlink('/etc/passwd',join(root,'output','clip.mp4'));
     await assert.rejects(service.preview(listing.entries[0].id),/FILE_OUTSIDE_FOLDER/);
+    await assert.rejects(service.pathForReveal(file.entry.id),/FILE_OUTSIDE_FOLDER/);
   } finally {await rm(root,{recursive:true,force:true});}
 });
 
@@ -40,5 +44,6 @@ test('media supports byte ranges, suffix requests and HEAD, and text is bounded 
     assert.equal(html.kind,'text'); assert.equal(html.text,'<script>danger()</script>');
     await assert.rejects(service.preview(folder.entries.find((e:{name:string})=>e.name==='large.txt')!.id),/FILE_TOO_LARGE/);
     await service.openRoot(root); assert.equal((await service.serve(new Request(clip.src))).status,404);
+    await assert.rejects(service.pathForReveal(clip.entry.id),/INVALID_FILE/);
   } finally {await rm(root,{recursive:true,force:true});}
 });

@@ -43,6 +43,7 @@
 .workspace-error {padding:10px 15px;color:#a65b4d;background:#fff8f5;font-size:11px;line-height:1.8;margin:0;}
 .workspace-file-preview>.workspace-error {position:absolute;left:12px;right:12px;bottom:12px;border-radius:7px;}
 .workspace-unsupported {font-size:12px;color:#9299a4;text-align:center;}
+.workspace-file-notice {padding:6px 15px;margin:0;font-size:11px;color:inherit;}
 @container workspace (max-width:580px) {
  .workspace-header {padding:0 7px 0 10px;gap:4px;}
  .workspace-breadcrumb {gap:4px;}

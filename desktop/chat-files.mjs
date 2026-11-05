@@ -40,7 +40,7 @@ export class ChatFiles {
     let service=this.#previews.get(item.id);
     if(!service){service=new WorkspaceFiles(this.compileHtml);this.#previews.set(item.id,service);}
     const preview=await service.grantFile(item.path,item.root);
-    if(preview.src)this.#services.set(new URL(preview.src).hostname,{service,path:item.path});
+    this.#services.set(preview.entry.id,{service,path:item.path});
     return {...preview,entry:{...preview.entry,name:item.name,relativePath:item.relativePath}};
   }
   async agentInputs(input,projectId,transformImage){
@@ -63,7 +63,25 @@ export class ChatFiles {
     }
     return media;
   }
+  async audioInputs(input,projectId){
+    const refs=z.array(z.object({id:z.string().uuid()}).strict()).max(10).parse(input);
+    if(projectId!==undefined)z.string().uuid().parse(projectId);
+    const records=await this.#records(),audio=[];
+    for(const ref of refs){
+      const item=records.find(r=>r.id===ref.id&&r.projectId===projectId);if(!item)throw Error('INVALID_FILE');
+      if(item.kind!=='audio')continue;
+      const path=await realpath(item.path),root=await realpath(item.root),rel=relative(root,path);
+      if(path!==item.path||rel==='..'||rel.startsWith('../')||isAbsolute(rel))throw Error('FILE_OUTSIDE_FOLDER');
+      const info=await stat(path);if(!info.isFile()||info.size>25*1024*1024)throw Error('FILE_TOO_LARGE');
+      if(!audio.some(a=>a.id===item.id))audio.push({id:item.id,name:item.name,path,root});
+    }
+    return audio;
+  }
   owns(id){return this.#services.has(id);}
+  async pathForReveal(id){
+    const grant=this.#services.get(id);if(!grant)throw Error('INVALID_FILE');
+    return grant.service.pathForReveal(id);
+  }
   async serve(request){
     const grant=this.#services.get(new URL(request.url).hostname);if(!grant)return new Response(null,{status:404});
     try{if(await realpath(grant.path)!==grant.path)return new Response(null,{status:404});return grant.service.serve(request);}catch{return new Response(null,{status:404});}

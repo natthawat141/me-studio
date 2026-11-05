@@ -4,7 +4,18 @@ import { mkdtemp, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DesktopProjects } from '../desktop/projects.mjs';
-import { trustedSender, runtimeEnvironment } from '../desktop/policy.mjs';
+import { trustedSender, runtimeEnvironment, allowDesktopPermission } from '../desktop/policy.mjs';
+
+test('fullscreen is restricted to the owned app main frame', () => {
+  const owner = {};
+  const valid = { isMainFrame: true, requestingUrl: 'http://127.0.0.1:18147/desktop' };
+  assert.equal(allowDesktopPermission(owner, owner, 'fullscreen', valid), true);
+  assert.equal(allowDesktopPermission({}, owner, 'fullscreen', valid), false);
+  assert.equal(allowDesktopPermission(owner, owner, 'media', valid), false);
+  assert.equal(allowDesktopPermission(owner, owner, 'fullscreen', { ...valid, isMainFrame: false }), false);
+  assert.equal(allowDesktopPermission(owner, owner, 'fullscreen', { ...valid, requestingUrl: 'https://example.org/' }), false);
+  assert.equal(allowDesktopPermission(owner, owner, 'fullscreen', {}), false);
+});
 
 test('desktop bridge accepts only its owned main frame and strips developer credentials', () => {
   assert.equal(trustedSender('http://127.0.0.1:18147/', true), true);

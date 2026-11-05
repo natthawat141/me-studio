@@ -21,8 +21,12 @@ import type { FolderProject, WorkspacePreview } from '@/lib/workspace-files';
 import {resolveChatFile, workspaceFiles } from '@/services/workspace-files';
 import './desktop-screen.css';
 import './desktop-theme.css';
+import {LocaleProvider} from './locale';
 
 export function DesktopScreen() {
+  return <LocaleProvider><DesktopContent /></LocaleProvider>;
+}
+function DesktopContent() {
   const chat = useChatPrototype();
   const models=useNativeModels();
   const video=useVideoConnection();

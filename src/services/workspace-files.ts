@@ -5,6 +5,8 @@ export function workspaceFiles(): WorkspaceFilesBridge {
   return window.meStudioFiles;
 }
 export async function resolveChatFile(file:ChatFileRef){const bridge=workspaceFiles();if(!bridge.chatFile)throw Error('DESKTOP_APP_REQUIRED');return bridge.chatFile({id:file.id,projectId:file.projectId});}
+export async function revealWorkspaceFile(id:string){const bridge=workspaceFiles();if(!bridge.revealFile)throw Error('DESKTOP_APP_REQUIRED');return bridge.revealFile({id});}
+export async function saveWorkspaceFileCopy(id:string,destination:'downloads'|'choose'='choose'){const bridge=workspaceFiles();if(!bridge.saveFileCopy)throw Error('DESKTOP_APP_REQUIRED');return bridge.saveFileCopy({id,destination});}
 export async function resolveVideoArtifact(id:string,projectId:string){const bridge=workspaceFiles();if(!bridge.videoArtifact)throw Error('DESKTOP_APP_REQUIRED');return bridge.videoArtifact({id,projectId});}
 export function fileError(error: unknown): string {
   const message=error instanceof Error?error.message:'';
